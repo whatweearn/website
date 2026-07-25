@@ -2,6 +2,8 @@ import { count } from "@/lib/format";
 import { type SiteStats, publishableCountries } from "@/lib/stats";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "@/lib/thresholds";
 
+import Link from "next/link";
+
 import { Reveal } from "./Reveal";
 import { Button, Container, Pill, SectionHead, TrustLine } from "./ui";
 import { ThemeToggle } from "./ThemeToggle";
@@ -28,12 +30,12 @@ export function Nav() {
           >
             The questions
           </a>
-          <a
-            href="#data"
+          <Link
+            href="/data"
             className="hidden text-ink-2 no-underline transition-colors hover:text-ink min-[760px]:inline"
           >
             The data
-          </a>
+          </Link>
           <ThemeToggle />
           <Button href="/survey" variant="ink" size="sm">
             Add your salary
@@ -61,7 +63,7 @@ export function Hero() {
         <Button id="cta-hero" href="/survey" size="lg" arrow className="max-[560px]:w-full">
           Add your salary
         </Button>
-        <Button href="#data" variant="ghost" size="lg" className="max-[560px]:w-full">
+        <Button href="/data" variant="ghost" size="lg" className="max-[560px]:w-full">
           See the data first
         </Button>
       </div>

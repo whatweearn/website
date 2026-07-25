@@ -1,7 +1,7 @@
 import { COUNTRIES } from "../survey/options";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
 import { type RateTable, totalCompEuro } from "../fx/convert";
-import type { CountryRow, Distribution, SiteStats } from "../stats";
+import { type CountryRow, type Cut, type Distribution, type SiteStats, cutKey } from "../stats";
 
 import { bins, summarise, trim } from "./quantiles";
 
@@ -62,7 +62,7 @@ export function aggregate(rows: readonly AggregateRow[], rates: RateTable): Aggr
   const skipped = new Map<string, number>();
   const bump = (reason: string) => skipped.set(reason, (skipped.get(reason) ?? 0) + 1);
 
-  const eligible: { country: string; total: number }[] = [];
+  const eligible: { country: string; level: string; total: number }[] = [];
 
   for (const row of rows) {
     if (!isHeadlineEligible(row)) {
@@ -70,7 +70,7 @@ export function aggregate(rows: readonly AggregateRow[], rates: RateTable): Aggr
       continue;
     }
     try {
-      eligible.push({ country: row.country, total: totalCompEuro(row, rates) });
+      eligible.push({ country: row.country, level: row.level, total: totalCompEuro(row, rates) });
     } catch {
       bump("missing_exchange_rate");
     }
@@ -116,9 +116,56 @@ export function aggregate(rows: readonly AggregateRow[], rates: RateTable): Aggr
       countriesCovered: byCountry.size,
       europe,
       countries,
+      cuts: buildCuts(eligible),
     },
     skipped: [...skipped].map(([reason, count]) => ({ reason, count })),
   };
+}
+
+/**
+ * Every country/level slice, including the "any" margins.
+ *
+ * Thin cuts are still listed with their response count — that a slice is thin
+ * is itself worth telling someone, and it is what turns "no data" into "help
+ * make this one publishable". Only the figures are withheld.
+ */
+function buildCuts(
+  eligible: readonly { country: string; level: string; total: number }[],
+): Record<string, Cut> {
+  const groups = new Map<string, { country: string | null; level: string | null; values: number[] }>();
+
+  const add = (country: string | null, level: string | null, total: number) => {
+    const key = cutKey(country, level);
+    const group = groups.get(key);
+    if (group) group.values.push(total);
+    else groups.set(key, { country, level, values: [total] });
+  };
+
+  for (const { country, level, total } of eligible) {
+    add(country, level, total);
+    add(country, null, total);
+    add(null, level, total);
+    add(null, null, total);
+  }
+
+  const cuts: Record<string, Cut> = {};
+  for (const [key, { country, level, values }] of groups) {
+    const responses = values.length;
+    const sorted = [...values].sort((a, b) => a - b);
+    const publishable = responses >= COUNTRY_PUBLISH_MIN;
+    const summary = publishable ? summarise(trim(sorted)) : null;
+
+    cuts[key] = {
+      country,
+      level,
+      responses,
+      median: summary?.median ?? null,
+      p25: summary?.p25 ?? null,
+      p75: summary?.p75 ?? null,
+      distribution: distributionOf(sorted),
+    };
+  }
+  return cuts;
 }
 
 /**

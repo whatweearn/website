@@ -45,9 +45,19 @@ function Marker({
   );
 }
 
-function CardShell({ children }: { children: React.ReactNode }) {
+/**
+ * @param lifted Pulls the card up over the band boundary behind it. Only the
+ *   landing page wants that; anywhere else it would ride over the content
+ *   above.
+ */
+function CardShell({ children, lifted }: { children: React.ReactNode; lifted?: boolean }) {
   return (
-    <div className="mt-[calc(-1*var(--card-lift))] rounded-xl border border-line bg-surface p-[clamp(1.25rem,2.6vw,1.9rem)] shadow-lg">
+    <div
+      className={cx(
+        "rounded-xl border border-line bg-surface p-[clamp(1.25rem,2.6vw,1.9rem)] shadow-lg",
+        lifted && "mt-[calc(-1*var(--card-lift))]",
+      )}
+    >
       {children}
     </div>
   );
@@ -60,9 +70,9 @@ function CardShell({ children }: { children: React.ReactNode }) {
  * one, the card changes job: it explains what will appear here and why it
  * isn't here yet. Being early is the offer.
  */
-function AwaitingData() {
+function AwaitingData({ lifted }: { lifted?: boolean }) {
   return (
-    <CardShell>
+    <CardShell lifted={lifted}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2 border-b border-line pb-5">
         <p className="font-display text-lg font-semibold tracking-[-0.02em]">
           Where would you land?
@@ -90,7 +100,7 @@ function AwaitingData() {
   );
 }
 
-function Interactive({ distribution }: { distribution: Distribution }) {
+function Interactive({ distribution, lifted }: { distribution: Distribution; lifted?: boolean }) {
   const [value, setValue] = useState(() => distribution.median);
 
   const peak = useMemo(
@@ -109,7 +119,7 @@ function Interactive({ distribution }: { distribution: Distribution }) {
   );
 
   return (
-    <CardShell>
+    <CardShell lifted={lifted}>
       <div className="flex flex-wrap items-center gap-2.5 border-b border-line pb-5">
         <p className="font-display text-lg font-semibold tracking-[-0.02em]">
           Where would you land?
@@ -203,6 +213,16 @@ function Interactive({ distribution }: { distribution: Distribution }) {
   );
 }
 
-export function DistributionCard({ distribution }: { distribution: Distribution | null }) {
-  return distribution ? <Interactive distribution={distribution} /> : <AwaitingData />;
+export function DistributionCard({
+  distribution,
+  lifted,
+}: {
+  distribution: Distribution | null;
+  lifted?: boolean;
+}) {
+  return distribution ? (
+    <Interactive distribution={distribution} lifted={lifted} />
+  ) : (
+    <AwaitingData lifted={lifted} />
+  );
 }

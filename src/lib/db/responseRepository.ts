@@ -94,3 +94,26 @@ export async function saveRates(date: string, rates: Record<string, number>): Pr
     ON CONFLICT (rate_date, currency) DO UPDATE SET per_eur = EXCLUDED.per_eur
   `;
 }
+
+/** Rows for the downloadable dataset, before disclosure control is applied. */
+export async function loadMicrodataRows(): Promise<import("../stats/microdata").MicrodataRow[]> {
+  const sql = db();
+  return sql<import("../stats/microdata").MicrodataRow[]>`
+    SELECT
+      country,
+      level,
+      contract_type    AS "contractType",
+      work_setup       AS "workSetup",
+      discipline,
+      company_size     AS "companySize",
+      industry,
+      years_experience AS "yearsExperience",
+      base_salary      AS "baseSalary",
+      bonus,
+      equity_annual    AS "equityAnnual",
+      currency
+    FROM responses
+    WHERE superseded_by IS NULL
+      AND excluded_reason IS NULL
+  `;
+}

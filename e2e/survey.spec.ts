@@ -124,14 +124,12 @@ test.describe("survey funnel", () => {
 });
 
 test.describe("landing page", () => {
-  test("publishes no figure it did not collect", async ({ page }) => {
+  test("says so plainly when there is nothing to publish", async ({ page }) => {
     await page.goto("/");
-    const body = await page.textContent("body");
-
-    for (const invented of ["14,206", "€115,000", "€83,500"]) {
-      expect(body).not.toContain(invented);
-    }
+    // Pre-launch, the honest state is a named empty state — not a zero, and
+    // certainly not a placeholder figure.
     await expect(page.getByText("No distribution yet")).toBeVisible();
+    await expect(page.getByText(/engineers have answered/)).toHaveCount(0);
   });
 
   test("routes the hero call to action into the survey", async ({ page }) => {
@@ -139,5 +137,35 @@ test.describe("landing page", () => {
     await page.getByRole("link", { name: /Add your salary/ }).first().click();
     await expect(page).toHaveURL(/\/survey/);
     await expect(page.getByText("Question 1 of 9")).toBeVisible();
+  });
+});
+
+test.describe("the data page", () => {
+  test("renders honestly before any data exists", async ({ page }) => {
+    await page.goto("/data");
+    await expect(page.getByRole("heading", { name: "What engineers earn." })).toBeVisible();
+    await expect(page.getByText(/Nothing is published yet/)).toBeVisible();
+  });
+
+  test("keeps the filters usable with no data behind them", async ({ page }) => {
+    // An explorer that throws or blanks when a slice is empty is worse than
+    // one that says "nobody here yet" — which is also a recruiting message.
+    await page.goto("/data");
+    await page.getByLabel("Country").selectOption("PT");
+    await page.getByLabel("Level").selectOption("senior");
+    await expect(page.getByText(/Nobody here yet|Not enough answers here yet/)).toBeVisible();
+    await expect(page.getByRole("link", { name: /Add yours/ })).toBeVisible();
+  });
+
+  test("offers no download until there are rows to release", async ({ page }) => {
+    await page.goto("/data");
+    await expect(page.getByRole("link", { name: /Download CSV/ })).toHaveCount(0);
+    await expect(page.getByText(/download appears once/i)).toBeVisible();
+  });
+
+  test("is reachable from the landing page", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "See the data first" }).click();
+    await expect(page).toHaveURL(/\/data$/);
   });
 });

@@ -40,13 +40,47 @@ export type CountryRow = {
   p75: number | null;
 };
 
+/**
+ * One filtered view of the data.
+ *
+ * `country`/`level` are null for "everywhere"/"all levels", so the same shape
+ * covers the headline figure and the narrowest slice.
+ */
+export type Cut = {
+  country: string | null;
+  level: string | null;
+  /** Always present — how thin a slice is remains publishable information. */
+  responses: number;
+  /** Null when the cut has not cleared the publication threshold. */
+  median: number | null;
+  p25: number | null;
+  p75: number | null;
+  distribution: Distribution | null;
+};
+
 export type SiteStats = {
   totalResponses: number;
   countriesCovered: number;
   /** Null until there is enough data to draw anything honest. */
   europe: Distribution | null;
   countries: CountryRow[];
+  /** Every filterable slice, keyed by `country|level` with `*` for "any". */
+  cuts: Record<string, Cut>;
+  /** Set once the downloadable dataset has been generated. */
+  datasetRows?: number;
 };
+
+export function cutKey(country: string | null, level: string | null): string {
+  return `${country ?? "*"}|${level ?? "*"}`;
+}
+
+export function findCut(
+  stats: SiteStats,
+  country: string | null,
+  level: string | null,
+): Cut | undefined {
+  return stats.cuts[cutKey(country, level)];
+}
 
 /** True when we have nothing worth showing yet. */
 export function isPreLaunch(stats: SiteStats): boolean {
@@ -101,6 +135,7 @@ export const EMPTY_STATS: SiteStats = {
   countriesCovered: 0,
   europe: null,
   countries: [],
+  cuts: {},
 };
 
 /**

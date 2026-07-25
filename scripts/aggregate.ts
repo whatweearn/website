@@ -19,17 +19,25 @@ import { closeDatabase, hasDatabase } from "../src/lib/db/client";
 import { loadAggregateRows, loadLatestRates, saveRates } from "../src/lib/db/responseRepository";
 import { fetchEcbDaily } from "../src/lib/fx/ecb";
 import { aggregate } from "../src/lib/stats/aggregate";
+import { buildMicrodata, emptyMicrodata } from "../src/lib/stats/microdata";
+import { loadMicrodataRows } from "../src/lib/db/responseRepository";
 import { EMPTY_STATS, STATS_FILE } from "../src/lib/stats";
+
+const DATASET_FILE = "public/whatweearn-dataset.csv";
 
 async function main() {
   const outputPath = join(process.cwd(), STATS_FILE);
   await mkdir(dirname(outputPath), { recursive: true });
+
+  const datasetPath = join(process.cwd(), DATASET_FILE);
+  await mkdir(dirname(datasetPath), { recursive: true });
 
   if (!hasDatabase()) {
     // Writing the empty shape is the point: a build without a database must
     // still produce a file that says "nothing yet", never a stale one left
     // over from a previous run.
     await writeFile(outputPath, `${JSON.stringify(EMPTY_STATS, null, 2)}\n`);
+    await writeFile(datasetPath, emptyMicrodata());
     console.log("No DATABASE_URL — wrote the empty pre-launch dataset.");
     return;
   }
@@ -46,10 +54,22 @@ async function main() {
     }
   }
 
-  const [rows, rates] = await Promise.all([loadAggregateRows(), loadLatestRates()]);
+  const [rows, microRows, rates] = await Promise.all([
+    loadAggregateRows(),
+    loadMicrodataRows(),
+    loadLatestRates(),
+  ]);
   const { stats, skipped } = aggregate(rows, rates);
 
+  const dataset = buildMicrodata(microRows, rates);
+  await writeFile(datasetPath, dataset.csv);
+
+  stats.datasetRows = dataset.released;
   await writeFile(outputPath, `${JSON.stringify(stats, null, 2)}\n`);
+
+  console.log(
+    `Dataset: released ${dataset.released} rows, withheld ${dataset.withheld} for k-anonymity.`,
+  );
 
   console.log(`Read ${rows.length} responses across ${stats.countriesCovered} countries.`);
   for (const { reason, count } of skipped) {

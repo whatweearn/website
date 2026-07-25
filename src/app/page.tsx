@@ -39,7 +39,7 @@ export default async function Home() {
 
         <section className="bg-tint pb-[clamp(2.25rem,4vw,3.25rem)]">
           <Container>
-            <DistributionCard distribution={stats.europe} />
+            <DistributionCard distribution={stats.europe} lifted />
             <Proof stats={stats} />
           </Container>
         </section>

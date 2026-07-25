@@ -19,7 +19,7 @@ import {
 } from "@/lib/survey/options";
 import { responseSchema } from "@/lib/survey/schema";
 
-import { cx } from "../ui";
+import { Button, cx } from "../ui";
 import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
 import {
   STEP_KEY,
@@ -162,11 +162,21 @@ export function SurveyWizard({
   if (status === "done") {
     return (
       <div className="rounded-xl border border-line bg-surface p-8 text-center shadow-lg">
-        <h2 className="text-xl">Thank you — that&rsquo;s in.</h2>
-        <p className="mx-auto mt-3 max-w-[46ch] text-xs leading-relaxed text-ink-2">
-          Your answers are now part of the dataset and cannot be traced back to you, which also
-          means we cannot remove one specific response later. The full data opens as soon as
-          there is enough of it to publish.
+        <h2 className="text-xl">Thank you &mdash; that&rsquo;s in.</h2>
+        <p className="mx-auto mt-3 max-w-[48ch] text-xs leading-relaxed text-ink-2">
+          Your answers are part of the dataset now. Nothing connects them to you, which is also
+          why we cannot pull one specific response back out later &mdash; we would have no way
+          to tell which one was yours.
+        </p>
+        <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <Button href="/data" size="base" arrow>
+            See the data
+          </Button>
+        </div>
+        <p className="mx-auto mt-8 max-w-[48ch] border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
+          Want to hear when the results publish? You can leave an email on the data page. It
+          goes to a separate database with no link back to what you just answered &mdash; which
+          means we can never email you about your own numbers.
         </p>
       </div>
     );

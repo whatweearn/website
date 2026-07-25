@@ -283,14 +283,21 @@ Two inclusion rules were settled here, and they decide whether the medians mean 
 - **Part-timers are excluded, not extrapolated.** Scaling a 60% contract to full time invents a
   salary nobody is paid.
 
-**Untested:** the SQL and the Postgres repository. No database was reachable from the
-development environment, so `db/migrations/*.sql` and `PostgresResponseRepository` have never
-run. The schema's *shape* is asserted as text (`src/lib/db/schema.test.ts`), and every pure
-step — conversion, trimming, quantiles, binning, suppression — is covered. Standing up a real
-Postgres and running `pnpm db:migrate` end to end is the first task of Phase 4.
+The SQL now runs against real Postgres in tests, via PGlite (Postgres compiled to WebAssembly)
+— `src/lib/db/migrations.test.ts` applies the migrations and exercises the unique index, the
+check constraints and the `DISTINCT ON` rate lookup. Use it for any future migration: an
+untested migration's first execution should never be in production.
 
-**Phase 4 — results.** Confirmation page that unlocks the data, explorer with filters, thin-cell
-messaging, CSV download.
+**Phase 4 — results.** *Done.* Confirmation page, `/data` explorer with country and level
+filters, thin-cell messaging, CSV download.
+
+**The microdata tension, resolved.** The site promises a per-response CSV *and* that nothing
+below five people is published. A raw row is a cut of one — releasing rows verbatim would break
+the suppression promise the moment somebody sorted the file. The dataset is therefore released
+under k-anonymity: cities dropped entirely (the most identifying field we hold), experience
+banded into fives, pay rounded to €500 so an exact figure cannot fingerprint a row, and any
+quasi-identifier combination appearing fewer than `MIN_CELL_SIZE` times withheld. See
+`src/lib/stats/microdata.ts`.
 
 **Phase 5 — email.** Separate database, separate provider account, separate credentials, queued
 shuffled writes, `DATE`-only columns, double opt-in, one-click unsubscribe. Write the

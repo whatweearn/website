@@ -2,5 +2,6 @@
   "totalResponses": 0,
   "countriesCovered": 0,
   "europe": null,
-  "countries": []
+  "countries": [],
+  "cuts": {}
 }
