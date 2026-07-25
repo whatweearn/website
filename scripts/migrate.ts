@@ -14,7 +14,16 @@ import { join } from "node:path";
 
 import { closeDatabase, db, hasDatabase } from "../src/lib/db/client";
 
-const MIGRATIONS_DIR = join(process.cwd(), "db/migrations");
+/**
+ * Which database to migrate. The subscriber store has its own directory and
+ * its own credential, and is migrated by `pnpm db:migrate:subscribers` — the
+ * two must never be applied through the same connection.
+ */
+const TARGET = process.argv[2] === "subscribers" ? "subscribers" : "responses";
+const MIGRATIONS_DIR = join(
+  process.cwd(),
+  TARGET === "subscribers" ? "db/subscribers" : "db/migrations",
+);
 
 async function main() {
   if (!hasDatabase()) {
@@ -48,7 +57,7 @@ async function main() {
     console.log(`applied ${file}`);
   }
 
-  console.log(`schema up to date (${files.length} migration(s))`);
+  console.log(`${TARGET} schema up to date (${files.length} migration(s))`);
 }
 
 main()

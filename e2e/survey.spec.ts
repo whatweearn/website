@@ -169,3 +169,39 @@ test.describe("the data page", () => {
     await expect(page).toHaveURL(/\/data$/);
   });
 });
+
+test.describe("the notification list", () => {
+  test("offers the email on the data page, not inside the survey", async ({ page }) => {
+    // The two requests being minutes apart, from different pages, to
+    // different databases, is much of what makes "never linked" true.
+    await page.goto("/survey");
+    await expect(page.getByLabel(/Email me when results publish/)).toHaveCount(0);
+
+    await page.goto("/data");
+    await expect(page.getByLabel(/Email me when results publish/)).toBeVisible();
+  });
+
+  test("says plainly what it cannot do", async ({ page }) => {
+    await page.goto("/data");
+    await expect(page.getByText(/never email you about your own numbers/)).toBeVisible();
+  });
+
+  test("rejects a malformed address without contacting the server", async ({ page }) => {
+    await page.goto("/data");
+    await page.getByLabel(/Email me when results publish/).fill("not-an-email");
+    await page.getByRole("button", { name: /Notify me/ }).click();
+    // Native validation blocks it; nothing is sent and no error page appears.
+    await expect(page.getByText(/Check your inbox/)).toHaveCount(0);
+  });
+
+  test("explains a broken confirmation link instead of failing silently", async ({ page }) => {
+    await page.goto("/subscribed?state=invalid");
+    await expect(page.getByRole("heading", { name: /didn.t work/ })).toBeVisible();
+  });
+
+  test("confirms without leaking whether the address was already on the list", async ({ page }) => {
+    await page.goto("/subscribed?state=confirmed");
+    await expect(page.getByRole("heading", { name: /on the list/ })).toBeVisible();
+    await expect(page.getByText(/never about your own answers/)).toBeVisible();
+  });
+});

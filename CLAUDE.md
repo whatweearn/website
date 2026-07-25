@@ -299,9 +299,22 @@ banded into fives, pay rounded to €500 so an exact figure cannot fingerprint a
 quasi-identifier combination appearing fewer than `MIN_CELL_SIZE` times withheld. See
 `src/lib/stats/microdata.ts`.
 
-**Phase 5 — email.** Separate database, separate provider account, separate credentials, queued
-shuffled writes, `DATE`-only columns, double opt-in, one-click unsubscribe. Write the
-correlation test *first* — it is the acceptance criterion for the whole phase.
+**Phase 5 — email.** *Done.* Separate database and credential, `DATE`-only columns, double
+opt-in, RFC 8058 one-click unsubscribe, Resend as transport only.
+
+**Deviation from the plan, deliberate.** This phase specified queueing signups and flushing
+them in shuffled batches every fifteen minutes. On a serverless platform an in-process queue
+holding writes for fifteen minutes loses every pending signup when an instance recycles, which
+is routine — silently discarding something a person explicitly asked for is a worse failure
+than the one being defended against. The same guarantee is reached without the data loss:
+random UUID primary keys (so identifiers carry no ordering), date-only columns (no sub-day
+precision), and `compactDay()` rewriting a day's rows in random physical order. Residual risk
+is write-ahead-log or filesystem access to *both* databases, which no application-level design
+defeats.
+
+The acceptance criterion — `src/lib/subscribers/boundary.test.ts` — was written first and is
+verified to fail: a scratch module importing both clients was added, the test named it, and
+passed again on removal. A guard that cannot fail is worth nothing.
 
 Deliverability is a real risk here and is independent of provider: the list lies **dormant for
 ~11 months and then receives a single blast to everyone**. Dormant lists generate spam

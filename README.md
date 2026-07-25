@@ -31,7 +31,8 @@ pnpm dev
 | `pnpm test:watch` | Vitest, watching |
 | `pnpm check` | Lint + typecheck + test — the same gate CI runs |
 | `pnpm e2e` | Playwright, desktop and mobile |
-| `pnpm db:migrate` | Apply SQL migrations in order |
+| `pnpm db:migrate` | Apply response-database migrations |
+| `pnpm db:migrate:subscribers` | Apply subscriber-database migrations (separate instance) |
 | `pnpm aggregate` | Rebuild `src/data/stats.json` from the database |
 
 ## Licence

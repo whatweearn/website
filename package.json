@@ -14,7 +14,8 @@
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
     "aggregate": "tsx scripts/aggregate.ts",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "db:migrate:subscribers": "tsx scripts/migrate-subscribers.ts"
   },
   "dependencies": {
     "next": "16.2.11",

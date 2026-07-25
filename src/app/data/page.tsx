@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Explorer } from "@/components/Explorer";
+import { SubscribeForm } from "@/components/SubscribeForm";
 import { Container } from "@/components/ui";
 import { count } from "@/lib/format";
 import { getSiteStats } from "@/lib/stats";
@@ -62,6 +63,10 @@ export default async function DataPage() {
               The download appears once there are enough responses to release any rows.
             </p>
           )}
+        </section>
+
+        <section className="mt-16 border-t border-line pt-8">
+          <SubscribeForm />
         </section>
       </Container>
     </main>
