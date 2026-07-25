@@ -42,3 +42,11 @@ next-env.d.ts
 
 # local agent settings
 .claude/settings.local.json
+
+# documented example is safe to commit; real .env files are not
+!.env.example
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
