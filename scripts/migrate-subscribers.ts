@@ -14,7 +14,7 @@ import { join } from "node:path";
 import {
   closeSubscriberDatabase,
   hasSubscriberDatabase,
-  subscriberDb,
+  subscriberMigrationDb,
 } from "../src/lib/subscribers/client";
 
 const MIGRATIONS_DIR = join(process.cwd(), "db/subscribers");
@@ -24,7 +24,7 @@ async function main() {
     throw new Error("SUBSCRIBER_DATABASE_URL is not set. See .env.example.");
   }
 
-  const sql = subscriberDb();
+  const sql = subscriberMigrationDb();
   await sql`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       name       text PRIMARY KEY,

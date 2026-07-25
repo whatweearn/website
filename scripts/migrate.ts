@@ -12,7 +12,7 @@
 import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
-import { closeDatabase, db, hasDatabase } from "../src/lib/db/client";
+import { closeDatabase, hasDatabase, migrationDb } from "../src/lib/db/client";
 
 /**
  * Which database to migrate. The subscriber store has its own directory and
@@ -30,7 +30,7 @@ async function main() {
     throw new Error("DATABASE_URL is not set. See .env.example.");
   }
 
-  const sql = db();
+  const sql = migrationDb();
   await sql`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       name       text PRIMARY KEY,

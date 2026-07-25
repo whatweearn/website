@@ -38,11 +38,83 @@ without the first two rather than falling back to development values.
 - [ ] `DATABASE_URL` and `SUBSCRIBER_DATABASE_URL` point at **two different
       instances** with **different credentials**. Same instance, different schema is
       not sufficient: the separation is what makes "never linked to your answers"
-      true (`CLAUDE.md` §4).
+      true (`CLAUDE.md` §4). See §1a for what this means on Neon.
 - [ ] `pnpm db:migrate` and `pnpm db:migrate:subscribers` both run.
 - [ ] A throwaway submission verified end to end, then deleted. `PostgresResponseRepository`
       is covered by PGlite for schema and query shape, but the live driver's
       parameter binding has never run against a real server.
+
+---
+
+## 1a. Provisioning on Neon
+
+### Two projects, not two databases
+
+Create **two separate Neon projects**, both in `aws-eu-central-1` (Frankfurt):
+
+| Project | Purpose | Env vars |
+|---|---|---|
+| `whatweearn-responses` | Survey answers | `DATABASE_URL`, `DATABASE_URL_DIRECT` |
+| `whatweearn-subscribers` | Notification list | `SUBSCRIBER_DATABASE_URL`, `SUBSCRIBER_DATABASE_URL_DIRECT` |
+
+Two databases inside one project, or two branches of one project, are **not**
+sufficient. They share a compute and a credential, and the separation is the
+entire basis for the claim on the landing page.
+
+### The caveat worth deciding on deliberately
+
+Two projects under one Neon account is weaker than the design specifies, which
+called for separate *provider accounts*. Anyone holding the Neon console
+credential can query both, so the correlation defence reduces to "nobody with
+console access misbehaves or is compromised".
+
+That is a real reduction, and it may still be the right trade at this stage.
+Three options, in ascending order of both cost and strength:
+
+1. **Two projects, one account.** Simplest. Defends against a leaked database
+   credential, not against a compromised Neon login. Make the Neon account's
+   own security serious: hardware 2FA, no shared logins.
+2. **Two projects in two Neon organisations**, with the subscriber org owned by
+   a different login. Meaningfully stronger for little extra work.
+3. **Different providers entirely** — responses on Neon, subscribers elsewhere.
+   Strongest, most faff.
+
+Whichever is chosen, write it down here. An undocumented downgrade of this
+particular property is how the site ends up making a claim that is no longer
+true.
+
+### Connection strings
+
+Neon gives a pooled host (containing `-pooler`) and a direct one.
+
+- **App** → pooled. Neon's PgBouncer supports protocol-level prepared
+  statements, so `postgres.js` needs no configuration change; the earlier
+  advice to disable prepared statements is obsolete.
+- **Migrations** → direct, via `*_DIRECT`. Schema changes are long single
+  transactions and do not belong behind a transaction-mode pooler.
+
+### Scale to zero
+
+Neon suspends idle computes, so the first request after quiet time pays a cold
+start. Acceptable everywhere here except the nightly aggregation, which should
+simply tolerate it. Do not add a keep-alive ping: it defeats the point and
+costs compute hours for no benefit on a site with this traffic shape.
+
+### Order of operations
+
+```bash
+# 1. Both projects created, connection strings in .env.local
+pnpm db:migrate               # responses
+pnpm db:migrate:subscribers   # subscriber list
+
+# 2. Prove the live driver works — never exercised outside PGlite
+pnpm dev
+#    submit the survey once, then:
+pnpm aggregate                # should report 1 response, 0 published
+
+# 3. Delete the test row before anything real arrives
+#    psql "$DATABASE_URL_DIRECT" -c "DELETE FROM responses;"
+```
 
 ### Email — blocking before any broadcast
 

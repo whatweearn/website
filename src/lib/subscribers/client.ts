@@ -15,6 +15,13 @@ export function hasSubscriberDatabase(): boolean {
   return Boolean(process.env.SUBSCRIBER_DATABASE_URL);
 }
 
+/** See the note on the responses side: migrations want the direct endpoint. */
+export function subscriberMigrationDb(): postgres.Sql {
+  const url = process.env.SUBSCRIBER_DATABASE_URL_DIRECT ?? process.env.SUBSCRIBER_DATABASE_URL;
+  if (!url) throw new Error("SUBSCRIBER_DATABASE_URL is not set. See .env.example.");
+  return postgres(url, { max: 1, idle_timeout: 20, debug: false });
+}
+
 export function subscriberDb(): postgres.Sql {
   const url = process.env.SUBSCRIBER_DATABASE_URL;
   if (!url) {

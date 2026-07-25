@@ -16,6 +16,20 @@ export function hasDatabase(): boolean {
   return Boolean(process.env.DATABASE_URL);
 }
 
+/**
+ * Migrations run on the direct endpoint when one is configured.
+ *
+ * Neon's pooler runs PgBouncer in transaction mode. Ordinary queries are fine
+ * — it supports protocol-level prepared statements, so postgres.js needs no
+ * special handling — but schema changes are long single transactions that
+ * belong on a direct connection.
+ */
+export function migrationDb(): postgres.Sql {
+  const url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
+  if (!url) throw new Error("DATABASE_URL is not set. See .env.example.");
+  return postgres(url, { max: 1, idle_timeout: 20, debug: false });
+}
+
 export function db(): postgres.Sql {
   const url = process.env.DATABASE_URL;
   if (!url) {
