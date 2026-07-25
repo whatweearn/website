@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { sendEmail } from "@/lib/email/resend";
+import { renderEmail } from "@/lib/email/template";
 import { dayStamp } from "@/lib/security/identity";
 import { hasSubscriberDatabase } from "@/lib/subscribers/client";
 import { subscribe } from "@/lib/subscribers/repository";
@@ -52,21 +53,24 @@ export async function POST(request: Request) {
     // Double opt-in. Sent immediately, which is also why the sender name is
     // recognised when the results blast arrives a year later.
     const link = `${SITE_URL}/api/subscribe/confirm?email=${encodeURIComponent(address)}&token=${tokenFor(address, "confirm")}`;
+    const { html, text } = renderEmail({
+      preheader: "One click to confirm, and we will not write again until there is something to say.",
+      heading: "Confirm your notification",
+      paragraphs: [
+        "Someone asked us to email this address when the whatweearn results publish. If that was you, confirm below.",
+        "We will write twice a year at most: once when results publish, once when the survey reopens.",
+      ],
+      action: { label: "Confirm this address", url: link },
+      note:
+        "If this was not you, ignore it — nothing is stored until you confirm, and the address is deleted within a fortnight. " +
+        "We can never email you about your own survey answers: your address is kept in a separate database with no link back to them.",
+    });
+
     const sent = await sendEmail({
       to: address,
       subject: "Confirm your whatweearn notification",
-      text: [
-        "Someone asked us to email this address when the whatweearn results publish.",
-        "",
-        "If that was you, confirm here:",
-        link,
-        "",
-        "If it wasn't, ignore this — we will not email you again, and the address is",
-        "deleted within a fortnight.",
-        "",
-        "We can never email you about your own survey answers: your address is kept in a",
-        "different database with no link back to them.",
-      ].join("\n"),
+      text,
+      html,
     });
 
     // Development only: hand back the link so the opt-in flow can be walked

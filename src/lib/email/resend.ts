@@ -22,7 +22,10 @@ const SEND_URL = "https://api.resend.com/emails";
 export type Message = {
   to: string;
   subject: string;
+  /** Plain-text part. Always sent — see the note in template.ts. */
   text: string;
+  /** HTML part. Sent alongside the text, never instead of it. */
+  html?: string;
   /** Adds RFC 8058 one-click unsubscribe headers. */
   unsubscribeUrl?: string;
 };
@@ -59,7 +62,11 @@ export async function sendEmail(message: Message): Promise<SendResult> {
     from,
     to: [message.to],
     subject: message.subject,
+    // Multipart. Some people read plain text by preference, some clients
+    // strip HTML, and a text part measurably helps deliverability — an
+    // HTML-only message is a spam signal.
     text: message.text,
+    ...(message.html ? { html: message.html } : {}),
   };
 
   if (message.unsubscribeUrl) {
