@@ -1,0 +1,6 @@
+allowBuilds:
+  # Next.js image optimisation. Enabled so image handling never silently
+  # degrades, even though the current design ships no raster images.
+  sharp: true
+  # Native resolver used by eslint-config-next. Lint fails without its binary.
+  unrs-resolver: true
