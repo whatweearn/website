@@ -39,6 +39,7 @@ without the first two rather than falling back to development values.
       instances** with **different credentials**. Same instance, different schema is
       not sufficient: the separation is what makes "never linked to your answers"
       true (`CLAUDE.md` §4). See §1a for what this means on Neon.
+- [ ] `pnpm verify:separation` passes.
 - [ ] `pnpm db:migrate` and `pnpm db:migrate:subscribers` both run.
 - [ ] A throwaway submission verified end to end, then deleted. `PostgresResponseRepository`
       is covered by PGlite for schema and query shape, but the live driver's
@@ -61,27 +62,43 @@ Two databases inside one project, or two branches of one project, are **not**
 sufficient. They share a compute and a credential, and the separation is the
 entire basis for the claim on the landing page.
 
-### The caveat worth deciding on deliberately
+### Decided: two Neon organisations — 2026-07-25
 
-Two projects under one Neon account is weaker than the design specifies, which
-called for separate *provider accounts*. Anyone holding the Neon console
-credential can query both, so the correlation defence reduces to "nobody with
-console access misbehaves or is compromised".
+The two projects live in **separate Neon organisations, owned by separate
+logins**. One console credential therefore does not reach both, which is what
+keeps the landing page's claim literally true rather than dependent on nobody
+misbehaving.
 
-That is a real reduction, and it may still be the right trade at this stage.
-Three options, in ascending order of both cost and strength:
+| | Organisation | Project | Region |
+|---|---|---|---|
+| Responses | `whatweearn` | `whatweearn-responses` | `aws-eu-central-1` |
+| Subscribers | *(separate org, separate login)* | `whatweearn-subscribers` | `aws-eu-central-1` |
 
-1. **Two projects, one account.** Simplest. Defends against a leaked database
-   credential, not against a compromised Neon login. Make the Neon account's
-   own security serious: hardware 2FA, no shared logins.
-2. **Two projects in two Neon organisations**, with the subscriber org owned by
-   a different login. Meaningfully stronger for little extra work.
-3. **Different providers entirely** — responses on Neon, subscribers elsewhere.
-   Strongest, most faff.
+Rules that come with that choice:
 
-Whichever is chosen, write it down here. An undocumented downgrade of this
-particular property is how the site ends up making a claim that is no longer
-true.
+- **Do not add the responses login as a member of the subscriber organisation**,
+  or vice versa. Convenience during an incident is exactly when this gets
+  undone, and it would undo the property silently.
+- Both logins get hardware 2FA. The separation is only as good as the weaker
+  account.
+- Store the subscriber credentials somewhere the responses credentials are not.
+
+Rejected: two projects under one account (one console reaches both) and two
+providers (stronger, but more moving parts than this stage warrants). If either
+is ever reconsidered, change this section in the same commit — an undocumented
+downgrade of this property is how a site ends up making a claim that stopped
+being true.
+
+### Verify it, do not assume it
+
+```bash
+pnpm verify:separation
+```
+
+Compares the two connection strings and fails if they resolve to one instance —
+including the subtle cases: same host with different database names, or a
+pooled endpoint paired with the direct endpoint of the same project. Run it
+before any deploy that touches connection strings.
 
 ### Connection strings
 
