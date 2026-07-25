@@ -53,6 +53,10 @@ while IFS='=' read -r key value; do
   case "$key" in
     ''|\#*) continue ;;
     NEXT_PUBLIC_SITE_URL|NEXT_PUBLIC_SOURCE_URL) continue ;;
+    # `vercel link` writes VERCEL_OIDC_TOKEN into .env.local. It is short-lived
+    # and injected into every deployment automatically; storing a copy pins an
+    # expired value over the live one. Anything VERCEL_* is Vercel's to set.
+    VERCEL_*) continue ;;
   esac
   # Strip surrounding quotes; the legal values carry them.
   value="${value%\"}"; value="${value#\"}"
