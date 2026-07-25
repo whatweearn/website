@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { LegalPage, MissingController, Points, Section } from "@/components/legal";
-import { SOURCE_URL, getController } from "@/lib/legal";
+import { SOURCE_URL, getController, supervisoryAuthority } from "@/lib/legal";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "@/lib/thresholds";
 
 export const metadata: Metadata = {
@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default function PrivacyPage() {
   const controller = getController();
+  const authority = supervisoryAuthority(controller?.jurisdiction);
 
   return (
     <LegalPage
@@ -28,6 +29,9 @@ export default function PrivacyPage() {
               ["Data controller", controller.name],
               ["Contact", controller.email],
               ...(controller.address ? ([["Address", controller.address]] as const) : []),
+              ...(controller.companyNumber
+                ? ([["Enterprise number", controller.companyNumber]] as const)
+                : []),
             ]}
           />
         ) : (
@@ -76,16 +80,17 @@ export default function PrivacyPage() {
 
       <Section heading="If you give us an email address">
         <p>
-          The notification list is optional, lives on the data page rather than inside the
-          survey, and is stored in a <b>physically separate database</b> with its own
-          credentials. There is no key, no timestamp and no shared value connecting the two, and
-          no code in this project is permitted to open both connections — an automated test
-          fails the build if any module tries.
+          The notification list is optional, is never part of a survey submission, and is
+          stored in a <b>physically separate database</b> with its own credentials, in a
+          separate provider account. There is no key, no timestamp and no shared value
+          connecting the two, and no code in this project is permitted to open both
+          connections — an automated test fails the build if any module tries.
         </p>
         <p>
-          Both databases record dates rather than timestamps, and the subscriber table uses
-          random identifiers instead of sequential ones, so a signup and a response cannot be
-          matched up by when they arrived or by what order they were written in.
+          Both databases record dates rather than timestamps, signups are recorded only to the
+          week, and the subscriber table uses random identifiers rather than sequential ones —
+          so a signup and a response cannot be matched by when they arrived or by the order
+          they were written in.
         </p>
         <p>
           The consequence is worth stating plainly: <b>we can never email you about your own
@@ -145,6 +150,35 @@ export default function PrivacyPage() {
             ],
           ]}
         />
+      </Section>
+
+      <Section heading="Complaining">
+        <p>
+          If you think we have handled personal data badly, tell us first —{" "}
+          {controller ? (
+            <a href={`mailto:${controller.email}`} className="text-accent underline underline-offset-2">
+              {controller.email}
+            </a>
+          ) : (
+            "once a contact address is configured"
+          )}{" "}
+          — and we will answer.
+        </p>
+        {authority ? (
+          <p>
+            You also have the right to complain to a supervisory authority without going through
+            us. Ours is the{" "}
+            <a href={authority.url} className="text-accent underline underline-offset-2">
+              {authority.name}
+            </a>
+            . You may equally complain to the authority in the country where you live.
+          </p>
+        ) : (
+          <p>
+            You also have the right to complain to the data protection authority in the country
+            where you live.
+          </p>
+        )}
       </Section>
 
       <Section heading="Check for yourself">

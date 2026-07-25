@@ -371,3 +371,28 @@ test.describe("the confirmation screen", () => {
     await expect(page.getByText(/cannot take one particular response back out/)).toBeVisible();
   });
 });
+
+test.describe("legal pages", () => {
+  test("identifies the operator, as Belgian and German law require", async ({ page }) => {
+    await page.goto("/imprint");
+    await expect(page.getByText("Codeetry SRL", { exact: true })).toBeVisible();
+    await expect(page.getByText("privacy@whatweearn.eu")).toBeVisible();
+    await expect(page.getByText(/0880\.250\.749/)).toBeVisible();
+    // The alert only clears once a controller is genuinely configured.
+    await expect(page.getByText(/not ready to collect data/)).toHaveCount(0);
+  });
+
+  test("names a controller and a supervisory authority on the privacy page", async ({ page }) => {
+    await page.goto("/privacy");
+    await expect(page.getByText("Codeetry SRL")).toBeVisible();
+    // GDPR Article 13: people must be told the right to complain exists, and
+    // to whom — not merely that they have rights in the abstract.
+    await expect(page.getByText(/Belgian Data Protection Authority/)).toBeVisible();
+    await expect(page.getByText(/not ready to collect data/)).toHaveCount(0);
+  });
+
+  test("links the imprint from every page footer", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("link", { name: "Imprint" })).toBeVisible();
+  });
+});

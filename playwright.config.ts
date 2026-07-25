@@ -39,6 +39,14 @@ export default defineConfig({
       // The 20s floor exists to stop bots; an automated run legitimately
       // finishes in seconds. Lowered here, never disabled.
       FORM_MIN_FILL_MS: "0",
+      // The real controller identity: the legal pages assert against it, and
+      // the "not ready to collect data" alert must be gone.
+      LEGAL_CONTROLLER_NAME: "Codeetry SRL",
+      LEGAL_CONTACT_EMAIL: "privacy@whatweearn.eu",
+      LEGAL_CONTROLLER_ADDRESS: "Mont-Saint-Guibert, Belgium",
+      LEGAL_COMPANY_NUMBER: "0880.250.749",
+      LEGAL_VAT_ID: "BE0880250749",
+      LEGAL_JURISDICTION: "BE",
       TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
     },

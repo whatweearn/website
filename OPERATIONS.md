@@ -12,10 +12,15 @@ claims being true and being marketing.
 
 ### Legal — blocking
 
-- [ ] `LEGAL_CONTROLLER_NAME` and `LEGAL_CONTACT_EMAIL` set. **The privacy page
-      renders a visible "not ready to collect data" alert until they are**, because
-      a policy that silently omits its controller looks compliant and is not.
-- [ ] A monitored inbox behind `LEGAL_CONTACT_EMAIL`. Erasure requests arrive there.
+- [x] Controller configured — **Codeetry SRL**, Mont-Saint-Guibert, Belgium, enterprise
+      number 0880.250.749. Set 2026-07-25; the "not ready to collect data" alert is gone.
+- [ ] **`LEGAL_CONTROLLER_ADDRESS` still holds only a town.** Belgian Book XII and the German
+      DDG both require a *geographic* address — street and number — at which the operator can
+      be reached. Fill it in before launch.
+- [ ] A monitored inbox behind `privacy@whatweearn.eu`. Erasure requests arrive there, and an
+      unanswered one is a complaint to the Belgian DPA waiting to happen.
+- [ ] Confirm with a lawyer that the imprint satisfies Belgian Book XII, and that operating
+      this through Codeetry does not collide with client work.
 - [ ] Data Processing Agreements signed with the hosting provider, both database
       providers, and Resend.
 - [ ] Records of processing written for the subscriber list. Survey responses are

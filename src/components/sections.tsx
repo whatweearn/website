@@ -431,6 +431,9 @@ export function SiteFooter() {
           <a href="/privacy" className="no-underline hover:text-ink">
             Privacy
           </a>
+          <a href="/imprint" className="no-underline hover:text-ink">
+            Imprint
+          </a>
         </nav>
       </footer>
     </Container>
