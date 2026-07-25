@@ -11,10 +11,11 @@ import {
   SurveyPreview,
 } from "@/components/sections";
 import { Container } from "@/components/ui";
-import { getSiteStats } from "@/lib/stats";
+import { getSiteStats, hasPublishedFigures } from "@/lib/stats";
 
 export default async function Home() {
   const stats = await getSiteStats();
+  const published = hasPublishedFigures(stats);
 
   return (
     <>
@@ -31,7 +32,7 @@ export default async function Home() {
         <div id="top" />
 
         <div className="hero-glow">
-          <Hero />
+          <Hero published={published} />
           {/* Spacer derived from the same token as the card's negative lift, so
               the card can never ride up over the hero copy. */}
           <div className="h-[calc(var(--card-lift)+clamp(2rem,3vw,3rem))]" />
@@ -45,7 +46,7 @@ export default async function Home() {
         </section>
 
         <SurveyPreview />
-        <Payoff />
+        <Payoff published={published} />
         <CountryTable stats={stats} />
         <Closing />
       </main>

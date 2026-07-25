@@ -24,7 +24,7 @@ has to change on the page **before** the code ships.
 | "Your IP — never" | IPs are never written to durable storage; dedup uses a same-day expiring hash |
 | "Fewer than five responses is withheld" | Cell suppression at n<5, enforced in the aggregation layer, not the UI |
 | "The code is open" | Public repo from day one, including the suppression and outlier rules |
-| "Dataset opens the moment you submit" | No drip-feed, no premium tier, no email wall |
+| "Dataset opens the moment you submit" | No drip-feed, no premium tier, no email wall — **and the claim is only made once something has actually published.** Before that it is false, so the hero and payoff copy switch to the seeding version automatically (`hasPublishedFigures`). Metadata never makes the claim at all, because crawlers cache it |
 | "CC BY 4.0" | The published dataset carries that licence |
 | "Nine questions" | Nine *screens*. See §5 — the honest question count is higher unless we group |
 | "Email optional, never linked to your answers" | The two-store design in §4 is what makes this true. If the stores are ever joined, the page is lying |

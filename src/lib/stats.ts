@@ -87,6 +87,18 @@ export function isPreLaunch(stats: SiteStats): boolean {
   return stats.totalResponses === 0;
 }
 
+/**
+ * Whether any figure has actually been published.
+ *
+ * The site promises the dataset opens the moment you submit. That is true once
+ * something has cleared the threshold and false before it — and false for
+ * exactly the first few hundred people, whose goodwill the project depends on.
+ * Copy that makes the promise is gated on this.
+ */
+export function hasPublishedFigures(stats: SiteStats): boolean {
+  return stats.europe !== null || stats.countries.some((c) => c.median !== null);
+}
+
 export function totalCount(d: Distribution): number {
   return d.bins.reduce((sum, bin) => sum + bin.count, 0);
 }

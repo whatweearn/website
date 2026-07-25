@@ -55,16 +55,31 @@ export function Nav() {
 
 /* ----------------------------------------------------------------- hero -- */
 
-export function Hero() {
+/**
+ * @param published Whether any figure exists yet. Before that, the promise
+ *   that the dataset opens on submit is simply untrue, and the offer is a
+ *   different one: being early is the contribution.
+ */
+export function Hero({ published }: { published: boolean }) {
   return (
     <Container className="flex flex-col items-center gap-6 pt-[clamp(2.25rem,5.5vw,4rem)] pb-[clamp(2rem,4vw,3rem)] text-center">
       <Pill>Anonymous · Europe-wide · Open data</Pill>
       <h1 className="max-w-[14ch] text-3xl leading-[1.02] tracking-[-0.038em]">
         Know what you&rsquo;re <em className="not-italic text-coral">actually</em> worth.
       </h1>
-      <p className="max-w-[40ch] text-lg leading-snug text-ink-2">
-        A salary survey for software engineers in Europe. Nine questions, about two minutes,
-        and the whole dataset opens the moment you&rsquo;re done.
+      <p className="max-w-[42ch] text-lg leading-snug text-ink-2">
+        {published ? (
+          <>
+            A salary survey for software engineers in Europe. Nine questions, about two
+            minutes, and the whole dataset opens the moment you&rsquo;re done.
+          </>
+        ) : (
+          <>
+            A salary survey for software engineers in Europe. Nine questions, about two
+            minutes. Nothing is published yet — a country needs {COUNTRY_PUBLISH_MIN} answers
+            before its median means anything, so the early ones count for more.
+          </>
+        )}
       </p>
       <div className="mt-1 flex flex-wrap justify-center gap-3 max-[560px]:w-full max-[560px]:flex-col">
         <Button id="cta-hero" href="/survey" size="lg" arrow className="max-[560px]:w-full">
@@ -251,14 +266,21 @@ const TILES = [
   },
 ];
 
-export function Payoff() {
+export function Payoff({ published }: { published: boolean }) {
   return (
     <section className="bg-tint py-[clamp(3rem,5.5vw,4.5rem)]">
       <Container>
         <Reveal>
-          <SectionHead title="Submit, and everything opens.">
-            No drip-feed, no premium tier. It stays open.
-          </SectionHead>
+          {published ? (
+            <SectionHead title="Submit, and everything opens.">
+              No drip-feed, no premium tier. It stays open.
+            </SectionHead>
+          ) : (
+            <SectionHead title="It opens for everyone, the moment there is enough.">
+              No drip-feed, no premium tier, no email wall. The only thing between you and the
+              data is how many people have answered.
+            </SectionHead>
+          )}
         </Reveal>
 
         <Reveal className="grid gap-[clamp(1rem,2.5vw,1.5rem)] min-[800px]:grid-cols-3">

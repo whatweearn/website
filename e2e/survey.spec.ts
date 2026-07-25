@@ -424,3 +424,29 @@ test.describe("when the browser check cannot run", () => {
     await expect(page.getByText("Question 9 of 9")).toBeVisible();
   });
 });
+
+test.describe("the promise matches reality", () => {
+  test("does not claim the dataset opens when nothing has published", async ({ page }) => {
+    // The hero promised "the whole dataset opens the moment you're done" while
+    // /data showed empty states — false for exactly the first few hundred
+    // people, whose goodwill this project depends on.
+    await page.goto("/");
+    await expect(page.getByText(/opens the moment/)).toHaveCount(0);
+    await expect(page.getByText(/Nothing is published yet/)).toBeVisible();
+  });
+
+  test("makes being early the offer instead", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText(/the early ones count for more/)).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /It opens for everyone, the moment there is enough/ }),
+    ).toBeVisible();
+  });
+
+  test("keeps metadata true in either state", async ({ page }) => {
+    // Crawlers cache this, so it cannot be conditional on today's data.
+    await page.goto("/");
+    const description = await page.locator('meta[name="description"]').getAttribute("content");
+    expect(description).not.toMatch(/opens the moment/);
+  });
+});

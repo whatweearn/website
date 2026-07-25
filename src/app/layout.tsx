@@ -4,9 +4,17 @@ import "./globals.css";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
+/**
+ * True in every state.
+ *
+ * The page copy can promise the dataset opens on submit, because it knows
+ * whether anything has published. Metadata cannot: crawlers and social
+ * platforms cache it, so a version conditional on today's data would be stale
+ * and wrong half the time. This says only what is always so.
+ */
 const DESCRIPTION =
   "An anonymous salary survey for software engineers in Europe. Nine questions, about two " +
-  "minutes, and the whole dataset opens the moment you're done.";
+  "minutes. Open data, no accounts, no employer names.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
