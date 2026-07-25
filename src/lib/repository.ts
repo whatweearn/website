@@ -27,6 +27,15 @@ export interface ResponseRepository {
   save(record: StoredResponse): Promise<void>;
   /** Whether this handle already submitted today. */
   hasSubmittedToday(handle: string): Promise<boolean>;
+  /**
+   * How many usable responses a country has right now.
+   *
+   * Read live rather than from the nightly file so the confirmation screen can
+   * count the response just made. Safe to expose: per-country counts are
+   * already published on the data page, and a count is not a figure that
+   * manipulation could chase.
+   */
+  countForCountry(country: string): Promise<number>;
 }
 
 /**
@@ -45,6 +54,10 @@ class InMemoryRepository implements ResponseRepository {
 
   async hasSubmittedToday(handle: string): Promise<boolean> {
     return this.handles.has(handle);
+  }
+
+  async countForCountry(country: string): Promise<number> {
+    return this.records.filter((r) => r.response.country === country).length;
   }
 
   /** Test seam. */

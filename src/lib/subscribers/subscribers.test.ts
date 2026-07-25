@@ -4,9 +4,12 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { weekOf } from "./repository";
 import { looksLikeEmail, normaliseEmail, tokenFor, verifyToken } from "./tokens";
 
-const schema = readFileSync(join(process.cwd(), "db/subscribers/0001_init.sql"), "utf8");
+const schema = ["0001_init.sql", "0002_coarsen_date.sql"]
+  .map((f) => readFileSync(join(process.cwd(), "db/subscribers", f), "utf8"))
+  .join("\n");
 
 let db: PGlite;
 
@@ -29,6 +32,18 @@ describe("subscriber schema", () => {
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`,
     );
     expect(tables.rows.map((r) => r.table_name)).toContain("subscribers");
+  });
+
+  it("records signups by week, not by day", async () => {
+    // On a quiet day, one response and one signup match each other by date
+    // alone however far apart they arrived. A week multiplies the set that
+    // address could belong to by seven, for no functional cost.
+    const columns = await db.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_name='subscribers'`,
+    );
+    const names = columns.rows.map((r) => r.column_name);
+    expect(names).toContain("subscribed_week");
+    expect(names).not.toContain("subscribed_on");
   });
 
   it("stores dates, never timestamps", async () => {
@@ -66,15 +81,15 @@ describe("subscriber schema", () => {
   });
 
   it("accepts one row per address", async () => {
-    await db.query(`INSERT INTO subscribers (email, subscribed_on) VALUES ('a@b.co', CURRENT_DATE)`);
+    await db.query(`INSERT INTO subscribers (email, subscribed_week) VALUES ('a@b.co', CURRENT_DATE)`);
     await expect(
-      db.query(`INSERT INTO subscribers (email, subscribed_on) VALUES ('a@b.co', CURRENT_DATE)`),
+      db.query(`INSERT INTO subscribers (email, subscribed_week) VALUES ('a@b.co', CURRENT_DATE)`),
     ).rejects.toThrow();
   });
 
   it("generates distinct identifiers with no ordering between them", async () => {
     for (const email of ["a@x.co", "b@x.co", "c@x.co"]) {
-      await db.query(`INSERT INTO subscribers (email, subscribed_on) VALUES ($1, CURRENT_DATE)`, [
+      await db.query(`INSERT INTO subscribers (email, subscribed_week) VALUES ($1, CURRENT_DATE)`, [
         email,
       ]);
     }
@@ -133,5 +148,32 @@ describe("looksLikeEmail", () => {
 
   it("normalises for storage", () => {
     expect(normaliseEmail("  A@B.CO ")).toBe("a@b.co");
+  });
+});
+
+describe("weekOf", () => {
+  it("returns the Monday of the week", () => {
+    // Saturday 2026-07-25 belongs to the week starting Monday 2026-07-20.
+    expect(weekOf("2026-07-25")).toBe("2026-07-20");
+    expect(weekOf("2026-07-20")).toBe("2026-07-20");
+  });
+
+  it("treats Sunday as the end of its week, not the start", () => {
+    // The common off-by-one. Sunday 2026-07-26 is still the week of the 20th.
+    expect(weekOf("2026-07-26")).toBe("2026-07-20");
+    expect(weekOf("2026-07-27")).toBe("2026-07-27");
+  });
+
+  it("crosses a month and a year boundary correctly", () => {
+    expect(weekOf("2026-03-01")).toBe("2026-02-23");
+    expect(weekOf("2027-01-01")).toBe("2026-12-28");
+  });
+
+  it("collapses a whole week onto one value", () => {
+    // The point of the exercise: seven days of signups become
+    // indistinguishable from each other by date.
+    const week = ["2026-07-20", "2026-07-21", "2026-07-22", "2026-07-23", "2026-07-24",
+                  "2026-07-25", "2026-07-26"].map(weekOf);
+    expect(new Set(week).size).toBe(1);
   });
 });

@@ -38,6 +38,17 @@ export class PostgresResponseRepository implements ResponseRepository {
     `;
   }
 
+  async countForCountry(country: string): Promise<number> {
+    const sql = db();
+    const rows = await sql<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM responses
+      WHERE country = ${country}
+        AND superseded_by IS NULL
+        AND excluded_reason IS NULL
+    `;
+    return rows[0]?.n ?? 0;
+  }
+
   async hasSubmittedToday(handle: string): Promise<boolean> {
     const sql = db();
     const rows = await sql<{ exists: boolean }[]>`

@@ -260,7 +260,7 @@ as user-facing and say so on the site.
 |---|---|
 | Nightly | GitHub Actions `aggregate.yml` at 03:20 UTC — rebuilds the figures, verifies the suppression invariants, and commits only if they changed. The commit is what redeploys the site: `stats.json` is bundled at build time, so recomputing without a rebuild changes nothing a visitor sees. |
 | Weekly | Check aggregation ran; check ECB rate freshness |
-| Fortnightly | `purgeUnconfirmed()` — drops addresses that never confirmed |
-| Monthly | `compactDay()` over recent days; dependency updates |
+| Fortnightly | `purgeUnconfirmed()` — drops addresses that never confirmed (3-week window, since signups are recorded by week) |
+| Monthly | `compactWeek()` over recent weeks; dependency updates |
 | Quarterly | Restore both databases into scratch instances and verify |
 | Annually | Reopen the survey; re-read this document |

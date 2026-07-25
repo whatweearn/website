@@ -139,8 +139,20 @@ Rules, all of which are testable:
 1. **Two physically separate databases**, different provider projects, different credentials.
    The app holds two connection strings; neither role can read the other's schema.
 2. **`/api/response` returns no identifier.** Nothing the client could later send back.
-3. **Email is a second, user-initiated action on the confirmation page** — not a field in the
-   survey payload. The two requests are minutes apart because the human took minutes.
+3. **Email is a second, user-initiated action, and never part of the survey payload.**
+
+   *Amended 2026-07-25.* This originally required the form to live on a different page, minutes
+   later, and that gap was cited as part of why the claim holds. Examining it honestly: the gap
+   was never the mechanism. What defeats correlation is the storage — random UUID keys, dates
+   only, and physical order randomised. Two writes five seconds apart are exactly as
+   uncorrelatable as five hours apart, because **there is no time recorded to compare**. The
+   form therefore sits on the confirmation screen, where it converts, and the argument for the
+   delay is retired rather than quietly dropped.
+
+   The real weakness is volume, not proximity: on a day with one response and one signup, dates
+   match regardless. Signups are therefore recorded **by week** (`weekOf`), which multiplies the
+   set an address could belong to by seven — and matters most during a cold start, when volume
+   is lowest.
 4. **Subscriber rows store a date, not a timestamp.** `subscribed_on DATE`. This alone destroys
    sub-second correlation.
 5. **Batched, shuffled writes.** Queue subscribe events and flush on a ≥15-minute timer with

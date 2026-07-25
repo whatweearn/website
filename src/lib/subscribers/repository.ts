@@ -16,7 +16,7 @@ import { normaliseEmail } from "./tokens";
  * The same guarantee is reached without the data loss:
  *
  *   1. Random UUID primary keys, so row identifiers carry no ordering.
- *   2. Date-only columns, so nothing has sub-day precision.
+ *   2. Dates only, and for signups only the *week* — see {@link weekOf}.
  *   3. {@link compactDay}, which periodically rewrites a day's rows in random
  *      order so physical layout carries no signal either.
  *
@@ -26,11 +26,28 @@ import { normaliseEmail } from "./tokens";
  * and no application-level design defeats it.
  */
 
+/**
+ * The Monday of a date's week.
+ *
+ * Signups are recorded to the week rather than the day. On a quiet day a
+ * single response and a single signup match each other by date alone, however
+ * far apart they arrived; a week multiplies the set of people that address
+ * could belong to by seven. The column exists only to expire unconfirmed
+ * addresses, so nothing is lost.
+ */
+export function weekOf(day: string): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  const weekday = (date.getUTCDay() + 6) % 7; // Monday = 0
+  date.setUTCDate(date.getUTCDate() - weekday);
+  return date.toISOString().slice(0, 10);
+}
+
 export type SubscribeResult = "pending" | "already_confirmed" | "resubscribed";
 
 export async function subscribe(email: string, today: string): Promise<SubscribeResult> {
   const sql = subscriberDb();
   const address = normaliseEmail(email);
+  const week = weekOf(today);
 
   const existing = await sql<{ confirmed_on: string | null; unsubscribed_on: string | null }[]>`
     SELECT confirmed_on, unsubscribed_on FROM subscribers WHERE email = ${address}
@@ -43,7 +60,7 @@ export async function subscribe(email: string, today: string): Promise<Subscribe
       // being silently re-added.
       await sql`
         UPDATE subscribers
-        SET unsubscribed_on = NULL, confirmed_on = NULL, subscribed_on = ${today}
+        SET unsubscribed_on = NULL, confirmed_on = NULL, subscribed_week = ${week}
         WHERE email = ${address}
       `;
       return "resubscribed";
@@ -52,7 +69,7 @@ export async function subscribe(email: string, today: string): Promise<Subscribe
   }
 
   await sql`
-    INSERT INTO subscribers (email, subscribed_on) VALUES (${address}, ${today})
+    INSERT INTO subscribers (email, subscribed_week) VALUES (${address}, ${week})
     ON CONFLICT (email) DO NOTHING
   `;
   return "pending";
@@ -100,13 +117,15 @@ export async function confirmedRecipients(): Promise<string[]> {
  * An address someone entered and did not confirm is one we were never given
  * permission to keep.
  */
-export async function purgeUnconfirmed(olderThanDays = 14): Promise<number> {
+export async function purgeUnconfirmed(olderThanDays = 21): Promise<number> {
   const sql = subscriberDb();
+  // Three weeks rather than two: the stored value is the start of a week, so
+  // the grace period must clear the week itself before it means anything.
   const rows = await sql`
     DELETE FROM subscribers
     WHERE confirmed_on IS NULL
       AND unsubscribed_on IS NULL
-      AND subscribed_on < CURRENT_DATE - ${olderThanDays}::integer
+      AND subscribed_week < CURRENT_DATE - ${olderThanDays}::integer
     RETURNING id
   `;
   return rows.length;
@@ -119,13 +138,14 @@ export async function purgeUnconfirmed(olderThanDays = 14): Promise<number> {
  * the top of this file). Deleting and re-inserting keeps the same values and
  * the same random identifiers while discarding the order they arrived in.
  */
-export async function compactDay(day: string): Promise<number> {
+export async function compactWeek(day: string): Promise<number> {
   const sql = subscriberDb();
+  const week = weekOf(day);
   return sql.begin(async (tx) => {
     const rows = await tx<
       { id: string; email: string; confirmed_on: string | null; unsubscribed_on: string | null }[]
     >`
-      DELETE FROM subscribers WHERE subscribed_on = ${day}
+      DELETE FROM subscribers WHERE subscribed_week = ${week}
       RETURNING id, email, confirmed_on, unsubscribed_on
     `;
     if (rows.length === 0) return 0;
@@ -138,8 +158,8 @@ export async function compactDay(day: string): Promise<number> {
 
     for (const row of shuffled) {
       await tx`
-        INSERT INTO subscribers (id, email, subscribed_on, confirmed_on, unsubscribed_on)
-        VALUES (${row.id}, ${row.email}, ${day}, ${row.confirmed_on}, ${row.unsubscribed_on})
+        INSERT INTO subscribers (id, email, subscribed_week, confirmed_on, unsubscribed_on)
+        VALUES (${row.id}, ${row.email}, ${week}, ${row.confirmed_on}, ${row.unsubscribed_on})
       `;
     }
     return shuffled.length;

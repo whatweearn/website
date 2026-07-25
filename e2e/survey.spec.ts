@@ -49,7 +49,7 @@ test.describe("survey funnel", () => {
 
     // Never touching the currency select must still submit: the country's
     // default is shown as an answer, so it has to behave like one.
-    await expect(page.getByRole("heading", { name: /Thank you/ })).toBeVisible({
+    await expect(page.getByRole("heading", { name: /That.s in/ })).toBeVisible({
       timeout: 15_000,
     });
   });
@@ -313,5 +313,61 @@ test.describe("salary sanity checks", () => {
 
     await expect(page.getByText(/works out to about/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+});
+
+test.describe("the confirmation screen", () => {
+  async function submitFrom(page: Page, country: string) {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption(country);
+    await next(page);
+    await next(page);
+    await page.getByText("Permanent employee").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+    await page.getByRole("spinbutton").first().fill("78000");
+    await next(page);
+    await next(page);
+    await next(page);
+    const submit = page.getByRole("button", { name: "Submit" });
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    await submit.click();
+    await expect(page.getByRole("heading", { name: /That.s in/ })).toBeVisible({ timeout: 20_000 });
+  }
+
+  test("shows how close that country is to publishing", async ({ page }) => {
+    // The most valuable moment in the funnel: someone has just spent two
+    // minutes and feels good about it. A dead end here wastes it.
+    await submitFrom(page, "DE");
+    await expect(page.getByText(/engineer from Germany/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/more and Germany.s median publishes/)).toBeVisible();
+  });
+
+  test("offers the email inline rather than sending people elsewhere", async ({ page }) => {
+    await submitFrom(page, "NL");
+    await expect(page.getByLabel(/Email me when results publish/)).toBeVisible();
+    await expect(page.getByText(/never email you about your own numbers/)).toBeVisible();
+  });
+
+  test("offers a share carrying the gap, not an achievement", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await submitFrom(page, "DE");
+    await expect(page.getByText(/engineer from Germany/)).toBeVisible({ timeout: 15_000 });
+
+    await page.getByRole("button", { name: /Ask someone else/ }).click();
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    // "Germany needs N more" makes the reader's action consequential; "I did a
+    // survey" asks for a favour.
+    expect(copied).toMatch(/Germany needs \d+ more before its median publishes/);
+  });
+
+  test("keeps the deletion caveat, but not as the headline", async ({ page }) => {
+    await submitFrom(page, "ES");
+    const heading = await page.getByRole("heading", { name: /That.s in/ }).textContent();
+    expect(heading).not.toMatch(/cannot/i);
+    // Still said — just not the first thing at the moment of most goodwill.
+    await expect(page.getByText(/cannot take one particular response back out/)).toBeVisible();
   });
 });

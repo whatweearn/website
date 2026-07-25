@@ -21,7 +21,7 @@ import {
 import { checkSalary } from "@/lib/survey/plausibility";
 import { submittableResponseSchema } from "@/lib/survey/schema";
 
-import { Button, cx } from "../ui";
+import { cx } from "../ui";
 import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
 import {
   STEP_KEY,
@@ -33,6 +33,7 @@ import {
   setDraftValue,
   subscribeToDraft,
 } from "./draftStore";
+import { Confirmation } from "./Confirmation";
 import { Turnstile } from "./Turnstile";
 
 const TOTAL_STEPS = 9;
@@ -82,6 +83,9 @@ export function SurveyWizard({
         ? 1
         : 0;
   const [status, setStatus] = useState<"editing" | "sending" | "done" | "error">("editing");
+  // Captured before the draft is cleared: the confirmation screen needs it to
+  // show how close that country is to publishing.
+  const [submittedCountry, setSubmittedCountry] = useState<string>();
   const [turnstileToken, setTurnstileToken] = useState<string>();
   const [error, setError] = useState<string>();
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -172,6 +176,7 @@ export function SurveyWizard({
         return;
       }
 
+      setSubmittedCountry(parsed.data.country);
       clearDraft();
       setStatus("done");
     } catch {
@@ -181,26 +186,7 @@ export function SurveyWizard({
   }
 
   if (status === "done") {
-    return (
-      <div className="rounded-xl border border-line bg-surface p-8 text-center shadow-lg">
-        <h2 className="text-xl">Thank you &mdash; that&rsquo;s in.</h2>
-        <p className="mx-auto mt-3 max-w-[48ch] text-xs leading-relaxed text-ink-2">
-          Your answers are part of the dataset now. Nothing connects them to you, which is also
-          why we cannot pull one specific response back out later &mdash; we would have no way
-          to tell which one was yours.
-        </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-3">
-          <Button href="/data" size="base" arrow>
-            See the data
-          </Button>
-        </div>
-        <p className="mx-auto mt-8 max-w-[48ch] border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
-          Want to hear when the results publish? You can leave an email on the data page. It
-          goes to a separate database with no link back to what you just answered &mdash; which
-          means we can never email you about your own numbers.
-        </p>
-      </div>
-    );
+    return <Confirmation country={submittedCountry} />;
   }
 
   const steps = [
