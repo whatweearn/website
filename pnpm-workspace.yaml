@@ -1,4 +1,6 @@
 allowBuilds:
+  # Bundler behind tsx, used to run the aggregation script.
+  esbuild: true
   # Next.js image optimisation. Enabled so image handling never silently
   # degrades, even though the current design ships no raster images.
   sharp: true

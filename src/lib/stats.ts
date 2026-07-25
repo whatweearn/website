@@ -87,19 +87,30 @@ export function publishableCountries(stats: SiteStats): CountryRow[] {
   return stats.countries.filter((c) => isCountryPublishable(c.responses));
 }
 
+/** Where the nightly job writes its output, relative to the project root. */
+export const STATS_FILE = "src/data/stats.json";
+
+/**
+ * What the site shows before a single response exists.
+ *
+ * Also what it shows if the aggregation has never run. Both cases must render
+ * honestly rather than throwing or, worse, falling back to something invented.
+ */
+export const EMPTY_STATS: SiteStats = {
+  totalResponses: 0,
+  countriesCovered: 0,
+  europe: null,
+  countries: [],
+};
+
 /**
  * Current published aggregates.
  *
- * Deliberately empty: no responses have been collected, so there is nothing to
- * show. The design comp's `n = 14,206`, its country table and its synthetic
- * distribution were layout placeholders and must never reach production — a
- * survey whose only asset is credibility cannot ship invented numbers.
+ * Reads the file produced by `pnpm aggregate`. Suppression was applied when
+ * that file was written, so anything withheld is genuinely absent here — it
+ * cannot be leaked by a rendering mistake, because it was never sent.
  */
 export async function getSiteStats(): Promise<SiteStats> {
-  return {
-    totalResponses: 0,
-    countriesCovered: 0,
-    europe: null,
-    countries: [],
-  };
+  const data = (await import("../data/stats.json")).default;
+  return data as SiteStats;
 }

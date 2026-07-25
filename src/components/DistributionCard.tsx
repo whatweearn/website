@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 
-import { euro, euroCompact, medianGapPhrase, ordinal, percentilePhrase } from "@/lib/format";
-import { type Distribution, percentileAt, totalCount } from "@/lib/stats";
+import { count, euro, euroCompact, medianGapPhrase, ordinal, percentilePhrase } from "@/lib/format";
+import { type Distribution, percentileAt } from "@/lib/stats";
 import { COUNTRY_PUBLISH_MIN } from "@/lib/thresholds";
 
 import { Button, cx } from "./ui";
@@ -115,7 +115,7 @@ function Interactive({ distribution }: { distribution: Distribution }) {
           Where would you land?
         </p>
         <p className="ml-auto text-xs text-ink-3">
-          <span className="figure-num">{totalCount(distribution)}</span> responses
+          <span className="figure-num">{count(distribution.n)}</span> responses
         </p>
       </div>
 
@@ -193,7 +193,7 @@ function Interactive({ distribution }: { distribution: Distribution }) {
 
       <div className="mt-[1.35rem] flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-line pt-[1.1rem]">
         <p className="text-xs text-ink-2">
-          Based on {totalCount(distribution)} responses across Europe.
+          Based on {count(distribution.n)} responses across Europe.
         </p>
         <Button href="/survey" variant="ghost" size="sm" arrow>
           Add your number

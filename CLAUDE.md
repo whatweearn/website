@@ -227,9 +227,12 @@ Layered, because no single measure works:
 
 ## 7. Statistics and publication
 
-- Currency converted at **ECB daily reference rates** for the submission date; store the raw
-  amount, the currency, the rate used, and the converted value. Never store only the converted
-  figure.
+- Currency converted at **ECB daily reference rates**; `fx_rates` is keyed by date so re-running
+  the aggregation reproduces the same figures rather than drifting with today's rate. The raw
+  amount and its currency are what get stored — never only a converted value.
+- **`paymentsPerYear` is not a multiplier.** The entered base is already annual; it is context
+  for local norms and a plausibility flag. Multiplying would inflate every Spanish and
+  Portuguese salary by 17%.
 - Cost-of-living view uses **Eurostat price level indices** (official, free, redistributable).
   Avoid Numbeo — licensing.
 - **Suppression:** any cell with n<5 is withheld. A country publishes at n≥60. Both thresholds
@@ -268,8 +271,23 @@ fabricated numbers in production, including `n = 14,206`, the country table, and
 **Phase 2 — survey.** Nine screens, validation, localStorage drafts, `/api/response`,
 Turnstile, honeypot, rate limit. Playwright end-to-end.
 
-**Phase 3 — stats.** Schema, ECB rate ingestion, aggregation job, suppression module with
-tests, nightly static JSON build.
+**Phase 3 — stats.** *Done.* Schema, ECB ingestion, aggregation job, suppression, nightly
+static build (`pnpm aggregate` → `src/data/stats.json`).
+
+Two inclusion rules were settled here, and they decide whether the medians mean anything:
+
+- **Headline figures cover employees only.** B2B and freelance gross carries the worker's own
+  social contributions, so it is far higher for the same take-home; averaging it with employed
+  gross produces a number describing nobody. Those responses stay in the dataset and get their
+  own cut — they just do not contaminate "what a country pays".
+- **Part-timers are excluded, not extrapolated.** Scaling a 60% contract to full time invents a
+  salary nobody is paid.
+
+**Untested:** the SQL and the Postgres repository. No database was reachable from the
+development environment, so `db/migrations/*.sql` and `PostgresResponseRepository` have never
+run. The schema's *shape* is asserted as text (`src/lib/db/schema.test.ts`), and every pure
+step — conversion, trimming, quantiles, binning, suppression — is covered. Standing up a real
+Postgres and running `pnpm db:migrate` end to end is the first task of Phase 4.
 
 **Phase 4 — results.** Confirmation page that unlocks the data, explorer with filters, thin-cell
 messaging, CSV download.

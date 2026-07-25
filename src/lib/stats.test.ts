@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "./thresholds";
 import {
   type Distribution,
   getSiteStats,
-  isPreLaunch,
   percentileAt,
   publishableCountries,
   totalCount,
@@ -62,20 +62,51 @@ describe("totalCount", () => {
   });
 });
 
-describe("pre-launch state", () => {
-  it("ships no invented figures", async () => {
-    // Guards the one rule this project cannot break: a survey whose only asset
-    // is credibility must never publish numbers it did not collect.
-    const stats = await getSiteStats();
-    expect(stats.totalResponses).toBe(0);
-    expect(stats.countriesCovered).toBe(0);
-    expect(stats.europe).toBeNull();
-    expect(stats.countries).toEqual([]);
-    expect(isPreLaunch(stats)).toBe(true);
+describe("the shipped dataset", () => {
+  // These are invariants, not a snapshot of today. An earlier version asserted
+  // the file was empty, which would have started failing the day the first
+  // real response landed — a test that expires is worse than no test.
+
+  it("publishes no figure the design comp invented", async () => {
+    const serialised = JSON.stringify(await getSiteStats());
+    for (const invented of [14206, 115000, 83500, 73500, 68700]) {
+      expect(serialised).not.toContain(String(invented));
+    }
   });
 
-  it("publishes no country while none has cleared the threshold", async () => {
-    expect(publishableCountries(await getSiteStats())).toEqual([]);
+  it("never publishes a median below the publication threshold", async () => {
+    const { countries } = await getSiteStats();
+    for (const country of countries) {
+      if (country.median !== null) {
+        expect(country.responses).toBeGreaterThanOrEqual(COUNTRY_PUBLISH_MIN);
+      }
+    }
+  });
+
+  it("withholds every figure for a country under the threshold", async () => {
+    const { countries } = await getSiteStats();
+    for (const country of countries) {
+      if (country.responses < COUNTRY_PUBLISH_MIN) {
+        expect(country.median).toBeNull();
+        expect(country.p25).toBeNull();
+        expect(country.p75).toBeNull();
+      }
+    }
+  });
+
+  it("leaves no histogram bucket holding an identifiable handful of people", async () => {
+    const { europe } = await getSiteStats();
+    for (const bin of europe?.bins ?? []) {
+      expect(bin.count === 0 || bin.count >= MIN_CELL_SIZE).toBe(true);
+    }
+  });
+
+  it("keeps the summary counts consistent with the country list", async () => {
+    const stats = await getSiteStats();
+    expect(stats.countriesCovered).toBe(stats.countries.length);
+    expect(stats.totalResponses).toBeGreaterThanOrEqual(
+      stats.countries.reduce((sum, c) => sum + c.responses, 0),
+    );
   });
 });
 

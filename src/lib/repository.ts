@@ -1,3 +1,5 @@
+import { hasDatabase } from "./db/client";
+import { PostgresResponseRepository } from "./db/responseRepository";
 import type { SurveyResponse } from "./survey/schema";
 
 /**
@@ -51,9 +53,16 @@ class InMemoryRepository implements ResponseRepository {
   }
 }
 
-let repository: ResponseRepository = new InMemoryRepository();
+let repository: ResponseRepository | undefined;
 
+/**
+ * Postgres when a database is configured, in-memory otherwise.
+ *
+ * Chosen once and cached so a misconfigured deployment fails consistently
+ * rather than storing some responses and losing others.
+ */
 export function getRepository(): ResponseRepository {
+  repository ??= hasDatabase() ? new PostgresResponseRepository() : new InMemoryRepository();
   return repository;
 }
 

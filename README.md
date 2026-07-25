@@ -30,6 +30,9 @@ pnpm dev
 | `pnpm test` | Vitest, once |
 | `pnpm test:watch` | Vitest, watching |
 | `pnpm check` | Lint + typecheck + test — the same gate CI runs |
+| `pnpm e2e` | Playwright, desktop and mobile |
+| `pnpm db:migrate` | Apply SQL migrations in order |
+| `pnpm aggregate` | Rebuild `src/data/stats.json` from the database |
 
 ## Licence
 
@@ -41,6 +44,11 @@ freely reusable with attribution regardless of what happens to this codebase.
 ## Status
 
 Pre-launch. No responses have been collected, and no figure anywhere on the site is real yet.
+
+The site renders from `src/data/stats.json`, rebuilt nightly by `pnpm aggregate`. Suppression
+is applied when that file is written, so anything withheld is genuinely absent from it rather
+than hidden by the UI. Without a `DATABASE_URL` the job writes the empty pre-launch dataset,
+which is why a fresh clone shows empty states rather than stale numbers.
 
 `landing.html` at the repo root is the original approved design, now ported into the app. It
 is retained only as a reference for the interactive distribution card, which returns in Phase 4
