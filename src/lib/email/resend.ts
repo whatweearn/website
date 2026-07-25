@@ -27,7 +27,10 @@ export type Message = {
   unsubscribeUrl?: string;
 };
 
-export type SendResult = { ok: true } | { ok: false; reason: string };
+export type SendResult =
+  /** `skipped` means nothing was actually sent — development without credentials. */
+  | { ok: true; skipped: boolean }
+  | { ok: false; reason: string };
 
 export function isEmailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.EMAIL_FROM);
@@ -44,7 +47,7 @@ export async function sendEmail(message: Message): Promise<SendResult> {
     // Development: log the link rather than swallowing it, so the opt-in flow
     // can be walked through without credentials.
     console.info(`[email] would send "${message.subject}" to ${message.to}\n${message.text}`);
-    return { ok: true };
+    return { ok: true, skipped: true };
   }
 
   const headers: Record<string, string> = {
@@ -76,7 +79,7 @@ export async function sendEmail(message: Message): Promise<SendResult> {
       signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) return { ok: false, reason: `http_${res.status}` };
-    return { ok: true };
+    return { ok: true, skipped: false };
   } catch {
     return { ok: false, reason: "unreachable" };
   }

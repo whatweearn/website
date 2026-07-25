@@ -16,6 +16,8 @@ export function SubscribeForm() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [error, setError] = useState<string>();
+  /** Only ever populated by a development server with no mail credentials. */
+  const [devLink, setDevLink] = useState<string>();
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -34,6 +36,8 @@ export function SubscribeForm() {
         setError(body?.error ?? "That did not work. Please try again.");
         return;
       }
+      const body = (await res.json().catch(() => null)) as { devLink?: string } | null;
+      if (body?.devLink) setDevLink(body.devLink);
       setState("sent");
     } catch {
       setState("error");
@@ -43,11 +47,23 @@ export function SubscribeForm() {
 
   if (state === "sent") {
     return (
-      <p className="rounded-lg border border-line bg-surface p-5 text-xs leading-relaxed text-ink-2">
-        <b className="font-semibold text-ink">Check your inbox.</b> There is a link to confirm.
-        Until you follow it we hold nothing, and if you ignore it the address is deleted within
-        a fortnight.
-      </p>
+      <div className="rounded-lg border border-line bg-surface p-5 text-xs leading-relaxed text-ink-2">
+        <p>
+          <b className="font-semibold text-ink">Check your inbox.</b> There is a link to confirm.
+          Until you follow it we hold nothing, and if you ignore it the address is deleted within
+          a fortnight.
+        </p>
+        {devLink && (
+          <p className="mt-4 border-t border-line pt-4">
+            <b className="font-semibold text-ink">Development:</b> no mail credentials are
+            configured, so nothing was sent.{" "}
+            <a href={devLink} className="break-all text-accent underline underline-offset-2">
+              Follow the confirmation link
+            </a>
+            .
+          </p>
+        )}
+      </div>
     );
   }
 

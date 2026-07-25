@@ -50,8 +50,8 @@ without the first two rather than falling back to development values.
       Add `localhost` to the key's allowed hostnames if you want the widget to solve during
       local development; without it the survey correctly shows the "could not check your
       browser" path, which is worth seeing once anyway.
-- [ ] `RESEND_API_KEY`, `EMAIL_FROM` — **the last outstanding secret.** Until it is set,
-      `/api/subscribe` correctly returns 502 rather than claiming an email was sent.
+- [x] `RESEND_API_KEY`, `EMAIL_FROM` — set 2026-07-25. `whatweearn.eu` is verified in
+      Resend (`eu-west-1`), and a confirmation email sent through the app was delivered.
 - [ ] `NEXT_PUBLIC_SITE_URL=https://whatweearn.eu`
 
 ### Databases — blocking
@@ -166,7 +166,8 @@ pnpm aggregate                # should report 1 response, 0 published
 
 ### Email — blocking before any broadcast
 
-- [ ] SPF, DKIM and DMARC configured for `whatweearn.eu` and verified.
+- [x] SPF and DKIM configured — Resend reports the domain verified, and mail is delivering.
+- [ ] DMARC still to add.
 - [ ] DMARC starts at `p=none` with reporting, tightened after a fortnight of clean data.
 - [ ] A confirmation email received and its link followed, in a real client.
 - [ ] One-click unsubscribe verified from a real client, not just by URL.

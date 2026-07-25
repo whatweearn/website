@@ -69,6 +69,13 @@ export async function POST(request: Request) {
       ].join("\n"),
     });
 
+    // Development only: hand back the link so the opt-in flow can be walked
+    // through before DNS and a Resend key exist. Gated on NODE_ENV, so a
+    // production build cannot return a confirmation token to a caller.
+    if (sent.ok && sent.skipped && process.env.NODE_ENV !== "production") {
+      return NextResponse.json({ ok: true, devLink: link });
+    }
+
     if (!sent.ok) {
       // Telling somebody to check an inbox nothing was sent to is worse than
       // an error: they wait, nothing arrives, and the address expires
