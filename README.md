@@ -51,9 +51,8 @@ is applied when that file is written, so anything withheld is genuinely absent f
 than hidden by the UI. Without a `DATABASE_URL` the job writes the empty pre-launch dataset,
 which is why a fresh clone shows empty states rather than stale numbers.
 
-`landing.html` at the repo root is the original approved design, now ported into the app. It
-is retained only as a reference for the interactive distribution card, which returns in Phase 4
-once there is real data to draw. It still contains the comp's placeholder statistics —
-a fabricated response count and country table — so treat nothing in it as real. A test
-(`src/app/markup.test.ts`) asserts none of those figures can reach a build. Delete the file
-once Phase 4 lands.
+The original design comp has been removed now that it is fully ported. It contained
+placeholder salary figures, and a repository whose whole purpose is verifying that the site
+tells the truth is no place to leave invented numbers lying around. It remains in git history
+(`git show 116180c:landing.html`) if the styling of the distribution card ever needs checking
+against the original.

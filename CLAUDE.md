@@ -1,7 +1,9 @@
 # whatweearn
 
 An anonymous salary survey for software engineers in Europe. Public results, open data,
-no accounts. `landing.html` is the approved landing-page design; everything else is to build.
+no accounts. The approved design has been ported into the app; the original comp was removed
+once Phase 4 landed, because it carried placeholder salary figures and this repository is the
+thing people audit to check the site is telling the truth.
 
 This file is the build plan and the standing context for work in this repo. Read it before
 starting a task. Update it when a decision changes.
@@ -38,7 +40,7 @@ Settled. Do not reopen without updating this file.
    rules out is permanent: we can never email anyone about *their own* response, because no
    link exists. State that on the confirmation page.
 2. **Landing page says "Email optional, never linked to your answers."** Applied to
-   `landing.html`. The old "No email" claim and the "Your email — never asked" bullet were
+   the landing page. The old "No email" claim and the "Your email — never asked" bullet were
    false once email exists; both replaced (§4.4).
 3. **Managed hosting.** Next.js + Tailwind v4 + pnpm, Postgres in an EU region, deployed to
    Vercel `fra1`. Self-hosting is rejected, not deferred.
@@ -261,7 +263,7 @@ Layered, because no single measure works:
 **Phase 0 — scaffold.** §2 is resolved. `pnpm create next-app` (TypeScript, App Router,
 Tailwind), pin the versions in §3, public repo, licence, CI running lint + typecheck + tests.
 
-**Phase 1 — the page.** Port `landing.html` into Next.js. Order matters: **tokens into `@theme`
+**Phase 1 — the page.** Port the design comp into Next.js. Order matters: **tokens into `@theme`
 first**, prove all four theme states, *then* build components — porting markup before the theme
 system means restyling twice. Add `<head>`: charset, viewport, description, Open Graph,
 canonical (the artifact build has none of these). **Strip every placeholder figure** — no
@@ -340,8 +342,8 @@ launch with fake data to prime the pump — it would destroy the one asset this 
 
 Tailwind v4, adopted fully. The rules that keep it from degrading:
 
-- **One source of truth for tokens.** `landing.html`'s palette, type scale and spacing move into
-  `@theme`. No hex literal appears in a component — ever. If a value isn't in the theme, add it
+- **One source of truth for tokens.** The palette, type scale and spacing live in
+  `@theme` in `src/app/globals.css`. No hex literal appears in a component — ever. If a value isn't in the theme, add it
   to the theme.
 - **Theming must work in both directions.** The design responds to `prefers-color-scheme` *and*
   to an explicit `data-theme` attribute that overrides it either way. Tailwind v4 handles this
