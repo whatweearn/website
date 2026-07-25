@@ -114,13 +114,39 @@ test("keyboard focus is always visible", async ({ page }) => {
 });
 
 test("the page is usable at 200% zoom without horizontal scrolling", async ({ page }) => {
-  // WCAG 2.2 reflow: 320 CSS pixels of width at 400% of a 1280px viewport.
+  // WCAG 2.2 reflow: 320 CSS pixels of width.
   await page.setViewportSize({ width: 320, height: 720 });
+
   for (const [, path] of PAGES) {
     await page.goto(path);
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth - window.innerWidth,
-    );
-    expect(overflow, `${path} scrolls sideways at 320px`).toBeLessThanOrEqual(0);
+
+    const report = await page.evaluate(() => {
+      const root = document.documentElement;
+      // clientWidth, not window.innerWidth: innerWidth includes the scrollbar,
+      // which is 0px on macOS overlay scrollbars and ~15px on Linux. Measuring
+      // against it makes the same layout pass on one platform and fail on the
+      // other for reasons unrelated to the layout.
+      const layout = root.clientWidth;
+      const overflow = root.scrollWidth - layout;
+
+      const culprits = [...document.querySelectorAll<HTMLElement>("body *")]
+        .filter((el) => el.getBoundingClientRect().right > layout + 1)
+        .slice(0, 5)
+        .map((el) => {
+          const box = el.getBoundingClientRect();
+          const name = `${el.tagName.toLowerCase()}.${el.className.toString().slice(0, 40)}`;
+          return `${name} w=${Math.round(box.width)} right=${Math.round(box.right)}`;
+        });
+
+      return { layout, overflow, culprits };
+    });
+
+    // Naming the offending elements matters: this failed once on CI and not
+    // locally, and a bare number gave nothing to work from.
+    expect(
+      report.overflow,
+      `${path} overflows by ${report.overflow}px at layout width ${report.layout}\n` +
+        report.culprits.map((c) => `    ${c}`).join("\n"),
+    ).toBeLessThanOrEqual(0);
   }
 });
