@@ -1,5 +1,7 @@
 import postgres from "postgres";
 
+import { assertConnectionString } from "../connectionString";
+
 /**
  * The responses database.
  *
@@ -27,7 +29,7 @@ export function hasDatabase(): boolean {
 export function migrationDb(): postgres.Sql {
   const url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set. See .env.example.");
-  return postgres(url, {
+  return postgres(assertConnectionString("DATABASE_URL_DIRECT", url), {
     max: 1,
     idle_timeout: 20,
     debug: false,
@@ -43,7 +45,7 @@ export function db(): postgres.Sql {
       "DATABASE_URL is not set. Copy .env.example to .env.local and point it at a Postgres instance.",
     );
   }
-  client ??= postgres(url, {
+  client ??= postgres(assertConnectionString("DATABASE_URL", url), {
     // Responses are written once and read in a nightly batch; a large pool
     // buys nothing and costs connections on a serverless platform.
     max: 5,

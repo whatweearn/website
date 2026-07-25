@@ -1,5 +1,7 @@
 import postgres from "postgres";
 
+import { assertConnectionString } from "../connectionString";
+
 /**
  * The subscriber database.
  *
@@ -19,7 +21,7 @@ export function hasSubscriberDatabase(): boolean {
 export function subscriberMigrationDb(): postgres.Sql {
   const url = process.env.SUBSCRIBER_DATABASE_URL_DIRECT ?? process.env.SUBSCRIBER_DATABASE_URL;
   if (!url) throw new Error("SUBSCRIBER_DATABASE_URL is not set. See .env.example.");
-  return postgres(url, {
+  return postgres(assertConnectionString("SUBSCRIBER_DATABASE_URL_DIRECT", url), {
     max: 1,
     idle_timeout: 20,
     debug: false,
@@ -35,7 +37,7 @@ export function subscriberDb(): postgres.Sql {
       "SUBSCRIBER_DATABASE_URL is not set. It must point at a different database from DATABASE_URL.",
     );
   }
-  client ??= postgres(url, {
+  client ??= postgres(assertConnectionString("SUBSCRIBER_DATABASE_URL", url), {
     max: 3,
     idle_timeout: 20,
     // Statement parameters here are email addresses. Never log them.

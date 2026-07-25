@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
@@ -26,7 +26,10 @@ const TEXT = /\.(ts|tsx|js|jsx|css|md|json|sql|yml|yaml|sh|html|svg)$/;
 function trackedTextFiles(): string[] {
   return execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
     .split("\0")
-    .filter((f) => f && TEXT.test(f));
+    .filter((f) => f && TEXT.test(f))
+    // A file deleted from the working tree but not yet staged is still listed
+    // by `git ls-files`. That is a normal state mid-change, not a violation.
+    .filter((f) => existsSync(f));
 }
 
 // Everything outside printable ASCII and ordinary whitespace. Legitimate
