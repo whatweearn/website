@@ -87,20 +87,26 @@ describe("survives real email clients", () => {
   });
 });
 
-describe("identifies the sender proportionately", () => {
-  it("names the company and links the imprint on every message", () => {
+describe("no footer", () => {
+  it("carries no sender block", () => {
     const { html, text } = renderEmail(base);
-    expect(html).toMatch(/Sent by/);
-    expect(html).toContain("/imprint");
-    expect(text).toContain("/imprint");
+    expect(html).not.toMatch(/Sent by/);
+    expect(text).not.toMatch(/Sent by/);
+    expect(html).not.toMatch(/Who we are/);
   });
 
-  it("keeps the postal address off transactional mail", () => {
-    // A confirmation somebody asked for thirty seconds ago does not need a
-    // street address pasted into it; the imprint link covers it.
-    const { html, text } = renderEmail(base);
-    expect(html).not.toMatch(/Boucle|Mont-Saint-Guibert/);
-    expect(text).not.toMatch(/Boucle|Mont-Saint-Guibert/);
+  it("still offers a way out of a broadcast", () => {
+    // The footer went; the opt-out did not. List-Unsubscribe covers modern
+    // clients but not all, and an unsubscribe nobody can find is how a list
+    // collects spam complaints instead.
+    const { html, text } = renderEmail({ ...base, unsubscribeUrl: "https://x.test/u?t=1" });
+    expect(html).toContain("https://x.test/u?t=1");
+    expect(text).toContain("https://x.test/u?t=1");
+  });
+
+  it("adds nothing to transactional mail", () => {
+    const { html } = renderEmail(base);
+    expect(html).not.toMatch(/Unsubscribe/);
   });
 });
 

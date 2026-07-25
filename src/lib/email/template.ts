@@ -1,5 +1,3 @@
-import { SITE_URL, getController } from "../legal";
-
 /**
  * Email rendering.
  *
@@ -93,36 +91,7 @@ const DARK = {
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-/**
- * Who sent this, at the level the message actually calls for.
- *
- * A postal address belongs on a *broadcast* — unsolicited commercial mail is
- * expected to identify its sender that fully, and a recipient who did not ask
- * for it deserves to see who did. A confirmation somebody requested thirty
- * seconds earlier is transactional, and pasting a company's street address
- * into it is more than the situation needs.
- *
- * Both name the company and link to the imprint, which carries the address in
- * full, so the information is always one click away.
- */
-function senderLine(content: EmailContent): { html: string; text: string } {
-  const controller = getController();
-  const name = controller?.name ?? "whatweearn";
-  const imprint = `${SITE_URL}/imprint`;
-
-  // The unsubscribe line marks a broadcast: transactional mail has none.
-  const isBroadcast = Boolean(content.unsubscribeUrl);
-  const postal = isBroadcast && controller?.address ? `, ${controller.address}` : "";
-
-  return {
-    html: `Sent by ${esc(name)}${esc(postal)}. <a href="${esc(imprint)}">Who we are</a>.`,
-    text: `Sent by ${name}${postal}. Who we are: ${imprint}`,
-  };
-}
-
 export function renderEmail(content: EmailContent): { html: string; text: string } {
-  const sender = senderLine(content);
-
   const paragraphs = content.paragraphs
     .map(
       (p) =>
@@ -150,9 +119,18 @@ export function renderEmail(content: EmailContent): { html: string; text: string
                 font-size:13px;line-height:1.6;color:${FAINT};">${esc(content.note)}</p>`
     : "";
 
+  /**
+   * Kept, deliberately, despite the footer going.
+   *
+   * A broadcast has to offer a way out — the List-Unsubscribe header covers
+   * modern clients, but not all of them, and an opt-out somebody cannot find
+   * is how a mailing list collects spam complaints instead of unsubscribes.
+   * It now sits at the end of the message rather than in a footer block.
+   */
   const unsubscribe = content.unsubscribeUrl
-    ? `<br /><a href="${esc(content.unsubscribeUrl)}" style="color:${FAINT};">Unsubscribe</a> —
-       one click, no questions.`
+    ? `<p class="wwe-faint" style="margin:20px 0 0;font-size:12px;line-height:1.6;color:${FAINT};">
+         <a href="${esc(content.unsubscribeUrl)}" style="color:${FAINT};">Unsubscribe</a> — one click, no questions.
+       </p>`
     : "";
 
   const html = `<!doctype html>
@@ -207,13 +185,7 @@ export function renderEmail(content: EmailContent): { html: string; text: string
           ${paragraphs}
           ${action}
           ${note}
-        </td></tr>
-      </table>
-
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="max-width:520px;padding:20px 32px;font-family:${FONT};">
-        <tr><td class="wwe-faint" style="font-size:12px;line-height:1.6;color:${FAINT};">
-          ${sender.html}${unsubscribe}
+          ${unsubscribe}
         </td></tr>
       </table>
     </td>
@@ -228,8 +200,6 @@ export function renderEmail(content: EmailContent): { html: string; text: string
     ...content.paragraphs.flatMap((p) => [p, ""]),
     ...(content.action ? [content.action.label + ":", content.action.url, ""] : []),
     ...(content.note ? [content.note, ""] : []),
-    "—",
-    sender.text,
     ...(content.unsubscribeUrl ? [`Unsubscribe: ${content.unsubscribeUrl}`] : []),
   ].join("\n");
 
