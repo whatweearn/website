@@ -1,4 +1,4 @@
-import { getController } from "../legal";
+import { SITE_URL, getController } from "../legal";
 
 /**
  * Email rendering.
@@ -16,6 +16,18 @@ import { getController } from "../legal";
  * separately is how they end up saying different things — a link updated in
  * one and not the other, a paragraph added to the pretty version only. Here
  * both are derived from the same content, so they cannot disagree.
+ *
+ * ## Dark mode
+ *
+ * Declaring `color-scheme: light dark` tells Apple Mail we handle dark
+ * ourselves. Declaring it *without* supplying dark styles is worse than not
+ * declaring it at all: Mail darkened the card and left the inline text colours
+ * alone, so the message arrived as dark grey on near-black.
+ *
+ * Media queries cannot live in a style attribute, so this needs a `<style>`
+ * block — and that block contains dark overrides only. Everything required for
+ * the message to be readable stays inline, so a client that strips `<style>`
+ * (Gmail does, in places) still gets the complete light version.
  *
  * ## Why it looks restrained
  *
@@ -59,29 +71,67 @@ const PAPER = "#fcfcfa";
 const CARD = "#ffffff";
 const LINE = "#e9e6e2";
 
+/**
+ * Dark equivalents.
+ *
+ * Not an inversion — the coral is lifted so it still reads against a dark
+ * ground, and the button takes dark text on bright coral exactly as the site
+ * does.
+ */
+const DARK = {
+  paper: "#131417",
+  card: "#1b1d21",
+  line: "#2a2d33",
+  ink: "#f1f0ed",
+  muted: "#a8abb2",
+  faint: "#898c96",
+  coral: "#ff8f79",
+} as const;
+
 // System stack only. A webfont in email either fails to load or is stripped,
 // and the fallback is what most people see anyway.
 const FONT =
   "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-function senderLine(): string {
+/**
+ * Who sent this, at the level the message actually calls for.
+ *
+ * A postal address belongs on a *broadcast* — unsolicited commercial mail is
+ * expected to identify its sender that fully, and a recipient who did not ask
+ * for it deserves to see who did. A confirmation somebody requested thirty
+ * seconds earlier is transactional, and pasting a company's street address
+ * into it is more than the situation needs.
+ *
+ * Both name the company and link to the imprint, which carries the address in
+ * full, so the information is always one click away.
+ */
+function senderLine(content: EmailContent): { html: string; text: string } {
   const controller = getController();
-  if (!controller) return "whatweearn";
-  return [controller.name, controller.address].filter(Boolean).join(", ");
+  const name = controller?.name ?? "whatweearn";
+  const imprint = `${SITE_URL}/imprint`;
+
+  // The unsubscribe line marks a broadcast: transactional mail has none.
+  const isBroadcast = Boolean(content.unsubscribeUrl);
+  const postal = isBroadcast && controller?.address ? `, ${controller.address}` : "";
+
+  return {
+    html: `Sent by ${esc(name)}${esc(postal)}. <a href="${esc(imprint)}">Who we are</a>.`,
+    text: `Sent by ${name}${postal}. Who we are: ${imprint}`,
+  };
 }
 
 export function renderEmail(content: EmailContent): { html: string; text: string } {
-  const sender = senderLine();
+  const sender = senderLine(content);
 
   const paragraphs = content.paragraphs
     .map(
       (p) =>
-        `<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${MUTED};">${esc(p)}</p>`,
+        `<p class="wwe-muted" style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${MUTED};">${esc(p)}</p>`,
     )
     .join("");
 
   const action = content.action
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
+    ? `<table role="presentation" class="wwe-button" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;">
          <tr><td style="border-radius:999px;background:${CORAL};">
            <a href="${esc(content.action.url)}"
               style="display:inline-block;padding:13px 26px;font-family:${FONT};font-size:15px;
@@ -90,13 +140,13 @@ export function renderEmail(content: EmailContent): { html: string; text: string
            </a>
          </td></tr>
        </table>
-       <p style="margin:0 0 16px;font-size:12px;line-height:1.6;color:${FAINT};word-break:break-all;">
+       <p class="wwe-faint" style="margin:0 0 16px;font-size:12px;line-height:1.6;color:${FAINT};word-break:break-all;">
          Or paste this into your browser:<br />${esc(content.action.url)}
        </p>`
     : "";
 
   const note = content.note
-    ? `<p style="margin:24px 0 0;padding-top:20px;border-top:1px solid ${LINE};
+    ? `<p class="wwe-faint wwe-rule" style="margin:24px 0 0;padding-top:20px;border-top:1px solid ${LINE};
                 font-size:13px;line-height:1.6;color:${FAINT};">${esc(content.note)}</p>`
     : "";
 
@@ -113,8 +163,26 @@ export function renderEmail(content: EmailContent): { html: string; text: string
 <meta name="color-scheme" content="light dark" />
 <meta name="supported-color-schemes" content="light dark" />
 <title>${esc(content.heading)}</title>
+<style>
+  /* Dark overrides only. Every one of these has an inline light-mode
+     equivalent, so losing this block costs appearance, never legibility. */
+  @media (prefers-color-scheme: dark) {
+    .wwe-page  { background:${DARK.paper} !important; }
+    .wwe-card  { background:${DARK.card} !important; border-color:${DARK.line} !important; }
+    .wwe-ink   { color:${DARK.ink} !important; }
+    .wwe-muted { color:${DARK.muted} !important; }
+    .wwe-faint { color:${DARK.faint} !important; }
+    .wwe-rule  { border-top-color:${DARK.line} !important; }
+    .wwe-brand-we { color:${DARK.coral} !important; }
+    a { color:${DARK.coral} !important; }
+    .wwe-button a { color:#24100a !important; }
+    /* The cell only. Painting the table too puts a square behind the
+       rounded cell and squares off the button. */
+    .wwe-button td { background:${DARK.coral} !important; }
+  }
+</style>
 </head>
-<body style="margin:0;padding:0;background:${PAPER};">
+<body class="wwe-page" style="margin:0;padding:0;background:${PAPER};">
 <!-- Preheader: shown in the inbox list next to the subject, never on the page.
      Without it, clients pad the preview with whatever text comes first. -->
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
@@ -122,18 +190,18 @@ export function renderEmail(content: EmailContent): { html: string; text: string
 </div>
 
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-       style="background:${PAPER};padding:32px 16px;">
+       class="wwe-page" style="background:${PAPER};padding:32px 16px;">
   <tr>
     <td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
-             style="max-width:520px;background:${CARD};border:1px solid ${LINE};
+             class="wwe-card" style="max-width:520px;background:${CARD};border:1px solid ${LINE};
                     border-radius:14px;padding:32px;font-family:${FONT};">
         <tr><td>
-          <p style="margin:0 0 24px;font-size:17px;font-weight:600;letter-spacing:-0.02em;color:${INK};">
-            what<span style="color:${CORAL};">we</span>earn
+          <p class="wwe-ink" style="margin:0 0 24px;font-size:17px;font-weight:600;letter-spacing:-0.02em;color:${INK};">
+            what<span class="wwe-brand-we" style="color:${CORAL};">we</span>earn
           </p>
 
-          <h1 style="margin:0 0 16px;font-size:21px;line-height:1.25;font-weight:600;
+          <h1 class="wwe-ink" style="margin:0 0 16px;font-size:21px;line-height:1.25;font-weight:600;
                      letter-spacing:-0.02em;color:${INK};">${esc(content.heading)}</h1>
 
           ${paragraphs}
@@ -144,8 +212,8 @@ export function renderEmail(content: EmailContent): { html: string; text: string
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
              style="max-width:520px;padding:20px 32px;font-family:${FONT};">
-        <tr><td style="font-size:12px;line-height:1.6;color:${FAINT};">
-          Sent by ${esc(sender)}.${unsubscribe}
+        <tr><td class="wwe-faint" style="font-size:12px;line-height:1.6;color:${FAINT};">
+          ${sender.html}${unsubscribe}
         </td></tr>
       </table>
     </td>
@@ -161,7 +229,7 @@ export function renderEmail(content: EmailContent): { html: string; text: string
     ...(content.action ? [content.action.label + ":", content.action.url, ""] : []),
     ...(content.note ? [content.note, ""] : []),
     "—",
-    `Sent by ${sender}.`,
+    sender.text,
     ...(content.unsubscribeUrl ? [`Unsubscribe: ${content.unsubscribeUrl}`] : []),
   ].join("\n");
 

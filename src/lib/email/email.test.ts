@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isEmailConfigured } from "./resend";
+import { isEmailConfigured, sendEmail } from "./resend";
+
+afterEach(() => vi.unstubAllEnvs());
 
 const source = readFileSync(join(process.cwd(), "src/lib/email/resend.ts"), "utf8");
 
@@ -33,5 +35,24 @@ describe("Resend is a transport, not a database", () => {
 describe("configuration", () => {
   it("reports unconfigured when credentials are absent", () => {
     expect(isEmailConfigured()).toBe(false);
+  });
+});
+
+describe("links must be usable from an inbox", () => {
+  it("refuses in production to send a message containing a localhost link", async () => {
+    // Found in a real delivered email: NEXT_PUBLIC_SITE_URL was unset, so every
+    // confirmation link pointed at localhost. The send succeeded, the message
+    // looked correct, and the link was dead for the recipient.
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("RESEND_API_KEY", "test");
+    vi.stubEnv("EMAIL_FROM", "a@b.co");
+
+    const result = await sendEmail({
+      to: "someone@example.org",
+      subject: "x",
+      text: "Confirm: http://localhost:3000/api/subscribe/confirm?token=1",
+    });
+
+    expect(result).toEqual({ ok: false, reason: "link_points_at_localhost" });
   });
 });

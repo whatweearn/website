@@ -60,10 +60,12 @@ describe("survives real email clients", () => {
     expect(html).not.toMatch(/display:\s*grid/);
   });
 
-  it("styles inline rather than in a stylesheet", () => {
-    // Gmail strips <style> in several contexts; inline always survives.
+  it("styles inline, with the stylesheet reserved for dark overrides", () => {
+    // The original rule here was "no <style> at all". That was right in spirit
+    // and wrong absolutely: a media query cannot live in a style attribute, so
+    // dark mode is impossible without one. The rule is now that the block adds
+    // only appearance, never legibility — asserted in the dark-mode tests.
     const { html } = renderEmail(base);
-    expect(html).not.toMatch(/<style[\s>]/i);
     expect(html).toMatch(/style="[^"]*font-size/);
   });
 
@@ -85,13 +87,42 @@ describe("survives real email clients", () => {
   });
 });
 
-describe("identifies the sender", () => {
-  it("names who sent it", () => {
-    // Required of commercial mail, and it is also simply how a stranger
-    // decides whether to trust the message.
+describe("identifies the sender proportionately", () => {
+  it("names the company and links the imprint on every message", () => {
     const { html, text } = renderEmail(base);
     expect(html).toMatch(/Sent by/);
-    expect(text).toMatch(/Sent by/);
+    expect(html).toContain("/imprint");
+    expect(text).toContain("/imprint");
+  });
+
+  it("keeps the postal address off transactional mail", () => {
+    // A confirmation somebody asked for thirty seconds ago does not need a
+    // street address pasted into it; the imprint link covers it.
+    const { html, text } = renderEmail(base);
+    expect(html).not.toMatch(/Boucle|Mont-Saint-Guibert/);
+    expect(text).not.toMatch(/Boucle|Mont-Saint-Guibert/);
+  });
+});
+
+describe("dark mode", () => {
+  it("supplies dark styles, not just a declaration of support", () => {
+    // Declaring color-scheme without dark styles is worse than not declaring
+    // it: Apple Mail darkened the card and left the inline text dark, so the
+    // message arrived as dark grey on near-black.
+    const { html } = renderEmail(base);
+    expect(html).toMatch(/@media \(prefers-color-scheme: dark\)/);
+  });
+
+  it("keeps everything needed for legibility inline", () => {
+    // The style block is progressive enhancement. Gmail strips it in places,
+    // and the light version must survive that intact.
+    const { html } = renderEmail(base);
+    const styleBlock = /<style>([\s\S]*?)<\/style>/.exec(html)?.[1] ?? "";
+    expect(styleBlock).toMatch(/prefers-color-scheme/);
+    // Nothing outside the dark media query, comments aside.
+    const rules = styleBlock.replace(/\/\*[\s\S]*?\*\//g, "").replace(/@media[\s\S]*/, "");
+    expect(rules.trim()).toBe("");
+    expect(html).toMatch(/style="[^"]*color:#/);
   });
 });
 

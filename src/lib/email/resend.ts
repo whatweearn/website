@@ -43,6 +43,17 @@ export async function sendEmail(message: Message): Promise<SendResult> {
   const key = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM;
 
+  // A link to localhost is worthless in somebody's inbox, and the failure is
+  // silent: the message sends, looks right, and every recipient hits a dead
+  // link. Refusing to send is the smaller harm, and it surfaces the missing
+  // NEXT_PUBLIC_SITE_URL immediately instead of after a launch.
+  if (process.env.NODE_ENV === "production") {
+    const body = `${message.text}${message.html ?? ""}`;
+    if (/localhost|127\.0\.0\.1/.test(body)) {
+      return { ok: false, reason: "link_points_at_localhost" };
+    }
+  }
+
   if (!key || !from) {
     if (process.env.NODE_ENV === "production") {
       return { ok: false, reason: "email_not_configured" };

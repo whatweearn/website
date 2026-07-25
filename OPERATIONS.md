@@ -52,7 +52,10 @@ without the first two rather than falling back to development values.
       browser" path, which is worth seeing once anyway.
 - [x] `RESEND_API_KEY`, `EMAIL_FROM` — set 2026-07-25. `whatweearn.eu` is verified in
       Resend (`eu-west-1`), and a confirmation email sent through the app was delivered.
-- [ ] `NEXT_PUBLIC_SITE_URL=https://whatweearn.eu`
+- [x] `NEXT_PUBLIC_SITE_URL=https://whatweearn.eu` — **must be set wherever mail is sent
+      from.** Unset, every confirmation link points at localhost and is dead on arrival;
+      the send itself succeeds, so nothing looks wrong. `sendEmail` now refuses rather
+      than delivering a dead link.
 
 ### Databases — blocking
 
