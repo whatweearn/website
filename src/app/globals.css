@@ -1,1 +1,401 @@
 @import "tailwindcss";
+
+/* ============================================================================
+   TOKENS
+
+   Two layers, deliberately:
+
+   1. Raw semantic properties (--wwe-*) declared on :root and redefined per
+      theme. These are the only place a colour value is ever written.
+   2. `@theme inline` maps them into Tailwind's namespaces. `inline` matters —
+      it makes utilities compile to `var(--wwe-ink)` rather than baking in the
+      resolved value, so redefining the property at runtime actually retints
+      the page. Without `inline`, theme switching silently does nothing.
+
+   Components use the Tailwind utilities (bg-surface, text-ink). No component
+   writes a hex value. See CLAUDE.md §10.
+
+   Coral splits in two: --wwe-coral is decorative (bars, marks, washes),
+   --wwe-accent carries interactive text and fills so contrast holds at AA.
+   ============================================================================ */
+
+:root {
+  --wwe-bg: #fcfcfa;
+  --wwe-surface: #ffffff;
+  --wwe-tint: #f6f3f1;
+  --wwe-tint-2: #efebe7;
+  --wwe-ink: #1b1d22;
+  --wwe-ink-2: #5e6068;
+  --wwe-ink-3: #8d9098;
+  --wwe-line: #e9e6e2;
+  --wwe-line-2: #dad5d0;
+  --wwe-coral: #e8604c;
+  --wwe-accent: #c9442e;
+  --wwe-on-accent: #ffffff;
+  --wwe-on-ink: #fcfcfa;
+  --wwe-wash: #fdf1ee;
+  --wwe-track: #e7e4e0;
+
+  --wwe-shadow-sm: 0 1px 2px rgb(27 29 34 / 0.05), 0 2px 6px rgb(27 29 34 / 0.04);
+  --wwe-shadow-md: 0 2px 4px rgb(27 29 34 / 0.03), 0 12px 28px -12px rgb(27 29 34 / 0.16);
+  --wwe-shadow-lg: 0 2px 6px rgb(27 29 34 / 0.04), 0 30px 64px -28px rgb(27 29 34 / 0.24);
+  --wwe-glow: radial-gradient(60% 55% at 50% 22%, rgb(232 96 76 / 0.1), transparent 72%);
+
+  /* How far the distribution card rides up over the tinted band's edge. The
+     hero spacer is derived from this, so the card can never overlap the copy
+     above it at any viewport width. */
+  --card-lift: clamp(3.5rem, 6vw, 7rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --wwe-bg: #131417;
+    --wwe-surface: #1b1d21;
+    --wwe-tint: #17181c;
+    --wwe-tint-2: #232529;
+    --wwe-ink: #f1f0ed;
+    --wwe-ink-2: #a8abb2;
+    --wwe-ink-3: #7e818a;
+    --wwe-line: #2a2d33;
+    --wwe-line-2: #383c43;
+    --wwe-coral: #ff7a63;
+    --wwe-accent: #ff8f79;
+    --wwe-on-accent: #24100a;
+    --wwe-on-ink: #17181c;
+    --wwe-wash: rgb(255 122 99 / 0.13);
+    --wwe-track: #2e3137;
+
+    --wwe-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+    --wwe-shadow-md: 0 12px 28px -14px rgb(0 0 0 / 0.75);
+    --wwe-shadow-lg: 0 30px 64px -30px rgb(0 0 0 / 0.9);
+    --wwe-glow: radial-gradient(60% 55% at 50% 22%, rgb(255 122 99 / 0.1), transparent 72%);
+  }
+}
+
+/* The explicit attribute must beat the media query in BOTH directions, which
+   is why light is restated rather than left to fall through. */
+:root[data-theme="dark"] {
+  --wwe-bg: #131417;
+  --wwe-surface: #1b1d21;
+  --wwe-tint: #17181c;
+  --wwe-tint-2: #232529;
+  --wwe-ink: #f1f0ed;
+  --wwe-ink-2: #a8abb2;
+  --wwe-ink-3: #7e818a;
+  --wwe-line: #2a2d33;
+  --wwe-line-2: #383c43;
+  --wwe-coral: #ff7a63;
+  --wwe-accent: #ff8f79;
+  --wwe-on-accent: #24100a;
+  --wwe-on-ink: #17181c;
+  --wwe-wash: rgb(255 122 99 / 0.13);
+  --wwe-track: #2e3137;
+
+  --wwe-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+  --wwe-shadow-md: 0 12px 28px -14px rgb(0 0 0 / 0.75);
+  --wwe-shadow-lg: 0 30px 64px -30px rgb(0 0 0 / 0.9);
+  --wwe-glow: radial-gradient(60% 55% at 50% 22%, rgb(255 122 99 / 0.1), transparent 72%);
+}
+
+:root[data-theme="light"] {
+  --wwe-bg: #fcfcfa;
+  --wwe-surface: #ffffff;
+  --wwe-tint: #f6f3f1;
+  --wwe-tint-2: #efebe7;
+  --wwe-ink: #1b1d22;
+  --wwe-ink-2: #5e6068;
+  --wwe-ink-3: #8d9098;
+  --wwe-line: #e9e6e2;
+  --wwe-line-2: #dad5d0;
+  --wwe-coral: #e8604c;
+  --wwe-accent: #c9442e;
+  --wwe-on-accent: #ffffff;
+  --wwe-on-ink: #fcfcfa;
+  --wwe-wash: #fdf1ee;
+  --wwe-track: #e7e4e0;
+
+  --wwe-shadow-sm: 0 1px 2px rgb(27 29 34 / 0.05), 0 2px 6px rgb(27 29 34 / 0.04);
+  --wwe-shadow-md: 0 2px 4px rgb(27 29 34 / 0.03), 0 12px 28px -12px rgb(27 29 34 / 0.16);
+  --wwe-shadow-lg: 0 2px 6px rgb(27 29 34 / 0.04), 0 30px 64px -28px rgb(27 29 34 / 0.24);
+  --wwe-glow: radial-gradient(60% 55% at 50% 22%, rgb(232 96 76 / 0.1), transparent 72%);
+}
+
+@theme inline {
+  --color-bg: var(--wwe-bg);
+  --color-surface: var(--wwe-surface);
+  --color-tint: var(--wwe-tint);
+  --color-tint-2: var(--wwe-tint-2);
+  --color-ink: var(--wwe-ink);
+  --color-ink-2: var(--wwe-ink-2);
+  --color-ink-3: var(--wwe-ink-3);
+  --color-line: var(--wwe-line);
+  --color-line-2: var(--wwe-line-2);
+  --color-coral: var(--wwe-coral);
+  --color-accent: var(--wwe-accent);
+  --color-on-accent: var(--wwe-on-accent);
+  --color-on-ink: var(--wwe-on-ink);
+  --color-wash: var(--wwe-wash);
+  --color-track: var(--wwe-track);
+
+  --shadow-sm: var(--wwe-shadow-sm);
+  --shadow-md: var(--wwe-shadow-md);
+  --shadow-lg: var(--wwe-shadow-lg);
+
+  /* Avenir Next carries the display face; Corbel is the Windows humanist
+     match. ui-rounded gives macOS SF Rounded for figures, which keeps money
+     warm rather than clinical. No webfonts: nothing to block first paint. */
+  --font-display: "Avenir Next", Avenir, "Segoe UI Variable Display", Corbel, system-ui, sans-serif;
+  --font-body: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --font-figure: ui-rounded, "SF Pro Rounded", "Avenir Next", Corbel, system-ui, sans-serif;
+
+  --text-2xs: 0.75rem;
+  --text-xs: clamp(0.82rem, 0.8rem + 0.08vw, 0.875rem);
+  --text-base: clamp(1rem, 0.97rem + 0.14vw, 1.075rem);
+  --text-lg: clamp(1.15rem, 1.09rem + 0.3vw, 1.35rem);
+  --text-xl: clamp(1.6rem, 1.4rem + 0.9vw, 2.2rem);
+  --text-2xl: clamp(2rem, 1.7rem + 1.6vw, 3rem);
+  --text-3xl: clamp(2.6rem, 2rem + 3.2vw, 4.4rem);
+
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+}
+
+/* ============================================================================
+   BASE
+   ============================================================================ */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+
+  body {
+    background: var(--wwe-bg);
+    color: var(--wwe-ink);
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--wwe-wash);
+    color: var(--wwe-ink);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-variant-numeric: lining-nums;
+    letter-spacing: -0.024em;
+    line-height: 1.1;
+    text-wrap: balance;
+  }
+
+  /* No border-radius here — the outline already follows the element's own
+     radius, and `inherit` would pull the parent's shape onto the focused
+     element. */
+  :focus-visible {
+    outline: 2px solid var(--wwe-coral);
+    outline-offset: 3px;
+  }
+
+  [id] {
+    scroll-margin-top: 5rem;
+  }
+}
+
+/* ============================================================================
+   COMPONENTS
+
+   Kept as hand-written CSS because utilities express these badly: vendor
+   pseudo-elements, edge-flipping labels, scroll-shadow backgrounds. They read
+   the same tokens as everything else, so this is not a second design system.
+   ============================================================================ */
+
+@layer components {
+  .figure-num {
+    font-family: var(--font-figure);
+    font-variant-numeric: lining-nums tabular-nums;
+    letter-spacing: -0.02em;
+  }
+
+  /* --- range input ------------------------------------------------------ */
+  .comp-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    background: transparent;
+    cursor: grab;
+    margin: 0;
+    padding-block: 0.55rem;
+  }
+  .comp-slider:active {
+    cursor: grabbing;
+  }
+  .comp-slider::-webkit-slider-runnable-track {
+    height: 6px;
+    background: var(--wwe-track);
+    border-radius: 999px;
+  }
+  .comp-slider::-moz-range-track {
+    height: 6px;
+    background: var(--wwe-track);
+    border-radius: 999px;
+  }
+  .comp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--wwe-surface);
+    border: 3px solid var(--wwe-coral);
+    margin-top: -10px;
+    box-shadow: var(--wwe-shadow-md);
+    transition: transform 0.15s ease;
+  }
+  .comp-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--wwe-surface);
+    border: 3px solid var(--wwe-coral);
+    box-shadow: var(--wwe-shadow-md);
+  }
+  .comp-slider:hover::-webkit-slider-thumb {
+    transform: scale(1.08);
+  }
+  .comp-slider:active::-webkit-slider-thumb {
+    transform: scale(1.14);
+  }
+
+  /* --- distribution markers --------------------------------------------- */
+  .plot-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    pointer-events: none;
+    transition: left 0.18s ease;
+  }
+  .plot-mark::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-left: 2px dashed currentColor;
+    opacity: 0.5;
+  }
+  .plot-mark > b {
+    position: absolute;
+    top: -0.35rem;
+    left: 0;
+    transform: translate(-50%, -100%);
+    white-space: nowrap;
+    font-size: var(--text-2xs);
+    font-weight: 600;
+    letter-spacing: -0.005em;
+    background: var(--wwe-surface);
+    padding-inline: 0.4rem;
+    transition: transform 0.12s ease;
+  }
+  /* Near either end the label would hang off the card — and off a phone
+     screen — so it anchors to the marker's inside edge instead of centring. */
+  .plot-mark[data-edge="start"] > b {
+    transform: translate(0, -100%);
+  }
+  .plot-mark[data-edge="end"] > b {
+    transform: translate(-100%, -100%);
+  }
+  /* The median sits on top of coral bars, so it borrows ink rather than a
+     grey that would vanish against the fill. */
+  .plot-mark[data-kind="median"] {
+    color: var(--wwe-ink);
+  }
+  .plot-mark[data-kind="median"]::before {
+    opacity: 0.34;
+  }
+  .plot-mark[data-kind="median"] > b {
+    color: var(--wwe-ink-3);
+  }
+  .plot-mark[data-kind="you"] {
+    color: var(--wwe-coral);
+    transition: left 0.12s linear;
+  }
+  .plot-mark[data-kind="you"]::before {
+    opacity: 1;
+    border-left-style: solid;
+  }
+  .plot-mark[data-kind="you"] > b {
+    color: var(--wwe-coral);
+  }
+
+  /* --- table horizontal scroll affordance -------------------------------- */
+  .table-scroll {
+    overflow-x: auto;
+    background:
+      linear-gradient(to right, var(--wwe-surface) 30%, transparent) left / 32px 100% no-repeat,
+      linear-gradient(to left, var(--wwe-surface) 30%, transparent) right / 32px 100% no-repeat,
+      radial-gradient(farthest-side at 0 50%, rgb(27 29 34 / 0.1), transparent) left / 12px 100%
+        no-repeat,
+      radial-gradient(farthest-side at 100% 50%, rgb(27 29 34 / 0.1), transparent) right / 12px 100%
+        no-repeat;
+    background-attachment: local, local, scroll, scroll;
+  }
+
+  /* --- scroll reveal ------------------------------------------------------ */
+  .reveal {
+    transition:
+      opacity 0.4s ease,
+      transform 0.4s cubic-bezier(0.22, 0.9, 0.3, 1);
+  }
+  .reveal[data-reveal="out"] {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  .reveal[data-reveal="in"] {
+    opacity: 1;
+    transform: none;
+  }
+  /* Content must never be hidden from someone who asked for less motion, even
+     if the observer never fires. */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal[data-reveal="out"] {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* --- hero glow --------------------------------------------------------- */
+  .hero-glow {
+    position: relative;
+    isolation: isolate;
+  }
+  .hero-glow::before {
+    content: "";
+    position: absolute;
+    inset: -10% 0 0;
+    background: var(--wwe-glow);
+    z-index: -1;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -25,10 +25,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Cheap checks first so an obvious break fails in seconds.
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test
 
-      # Build last: it is the slowest step and the least likely to be the
-      # thing that broke, so failing fast on the cheap checks saves minutes.
+      # Build before test: the markup assertions read .next/server/app/index.html,
+      # and would silently skip if the build had not run yet.
       - run: pnpm build
+      - run: pnpm test

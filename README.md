@@ -42,7 +42,9 @@ freely reusable with attribution regardless of what happens to this codebase.
 
 Pre-launch. No responses have been collected, and no figure anywhere on the site is real yet.
 
-`landing.html` at the repo root is the approved landing-page design, kept as a standalone
-reference until it is ported into the app. It contains placeholder statistics, including a
-fabricated response count and country table. **None of those numbers may reach production** —
-see `CLAUDE.md` Phase 1. The file is deleted once the port is done.
+`landing.html` at the repo root is the original approved design, now ported into the app. It
+is retained only as a reference for the interactive distribution card, which returns in Phase 4
+once there is real data to draw. It still contains the comp's placeholder statistics —
+a fabricated response count and country table — so treat nothing in it as real. A test
+(`src/app/markup.test.ts`) asserts none of those figures can reach a build. Delete the file
+once Phase 4 lands.
