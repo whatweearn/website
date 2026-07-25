@@ -13,7 +13,11 @@ import { ThemeToggle } from "./ThemeToggle";
 export function Nav() {
   return (
     <Container>
-      <div className="flex items-center justify-between gap-4 py-[1.35rem]">
+      {/* Wraps rather than overflows. Font metrics differ enough between
+          platforms — the same nav measures 149px on macOS and 161px on Linux —
+          that any fixed budget is a guess; letting it drop to a second line
+          cannot overflow at any width. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-[1.35rem]">
         {/* Wordmark only. "we" takes the accent — it separates the compound at
             the "wee" collision and says what the survey is: what WE earn. */}
         <a
@@ -23,7 +27,7 @@ export function Nav() {
         >
           what<span className="text-accent">we</span>earn
         </a>
-        <nav className="flex items-center gap-3 text-xs min-[400px]:gap-6">
+        <nav className="ml-auto flex min-w-0 items-center gap-3 text-xs min-[400px]:gap-6">
           <a
             href="#survey"
             className="hidden text-ink-2 no-underline transition-colors hover:text-ink min-[760px]:inline"
