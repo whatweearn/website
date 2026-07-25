@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="whatweearn">
+  <!--
+    A solid tile with one letter.
+
+    The wordmark is type, and type does not survive 16 pixels — an earlier
+    attempt at a bell-curve mark failed at 26. A filled shape with a single
+    high-contrast glyph is the one pattern that stays legible in a tab strip,
+    and the coral is the only distinctive colour the brand has.
+
+    The "w" is a path, not text: a favicon is rendered in contexts where the
+    site's fonts are not loaded, so anything set in type would fall back to
+    whatever the renderer happens to have.
+
+    Coral rather than the deeper accent because this sits on browser chrome
+    rather than on our own background, so the AA text ratios do not apply and
+    the brighter tone reads better small.
+  -->
+  <rect width="32" height="32" rx="7" fill="#e8604c" />
+  <path
+    d="M6.5 10.5 L11 21.5 L16 13.5 L21 21.5 L25.5 10.5"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="3.1"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
