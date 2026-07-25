@@ -3,5 +3,6 @@
   "countriesCovered": 0,
   "europe": null,
   "countries": [],
-  "cuts": {}
+  "cuts": {},
+  "datasetRows": 0
 }

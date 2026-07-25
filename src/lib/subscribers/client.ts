@@ -19,7 +19,13 @@ export function hasSubscriberDatabase(): boolean {
 export function subscriberMigrationDb(): postgres.Sql {
   const url = process.env.SUBSCRIBER_DATABASE_URL_DIRECT ?? process.env.SUBSCRIBER_DATABASE_URL;
   if (!url) throw new Error("SUBSCRIBER_DATABASE_URL is not set. See .env.example.");
-  return postgres(url, { max: 1, idle_timeout: 20, debug: false });
+  return postgres(url, {
+    max: 1,
+    idle_timeout: 20,
+    debug: false,
+    // "already exists, skipping" is expected on a re-run and is not a failure.
+    onnotice: () => {},
+  });
 }
 
 export function subscriberDb(): postgres.Sql {

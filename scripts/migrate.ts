@@ -50,10 +50,16 @@ async function main() {
 
     // Each migration runs in a transaction, so a failure half way leaves the
     // schema untouched rather than partially applied.
-    await sql.begin(async (tx) => {
-      await tx.unsafe(statements);
-      await tx`INSERT INTO schema_migrations (name) VALUES (${file})`;
-    });
+    try {
+      await sql.begin(async (tx) => {
+        await tx.unsafe(statements);
+        await tx`INSERT INTO schema_migrations (name) VALUES (${file})`;
+      });
+    } catch (error) {
+      // Name the file and the cause. A raw driver dump makes a schema that
+      // already exists in a different shape look like an unrelated crash.
+      throw new Error(`migration ${file} failed: ${(error as Error).message}`);
+    }
     console.log(`applied ${file}`);
   }
 

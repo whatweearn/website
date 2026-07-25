@@ -41,9 +41,12 @@ without the first two rather than falling back to development values.
       true (`CLAUDE.md` §4). See §1a for what this means on Neon.
 - [ ] `pnpm verify:separation` passes.
 - [ ] `pnpm db:migrate` and `pnpm db:migrate:subscribers` both run.
-- [ ] A throwaway submission verified end to end, then deleted. `PostgresResponseRepository`
-      is covered by PGlite for schema and query shape, but the live driver's
-      parameter binding has never run against a real server.
+- [x] A throwaway submission verified end to end, then deleted — done 2026-07-25 against
+      Neon. The live driver had never run outside PGlite; it works. The stored row held
+      only `submitted_on` (a date), the one-way handle, and the answers: no address, no
+      user agent, no sub-day timestamp. Aggregation fetched 30 real ECB rates, published
+      0 medians (below threshold) and withheld the lone row from the dataset for
+      k-anonymity, all as designed.
 
 ---
 
@@ -116,6 +119,13 @@ Neon suspends idle computes, so the first request after quiet time pays a cold
 start. Acceptable everywhere here except the nightly aggregation, which should
 simply tolerate it. Do not add a keep-alive ping: it defeats the point and
 costs compute hours for no benefit on a site with this traffic shape.
+
+### Standalone scripts and `.env.local`
+
+Next.js loads `.env.local` itself; `tsx` does not. Every script therefore runs
+with `--env-file-if-exists=.env.local`. Without it the checklist fails with
+"DATABASE_URL is not set" while it is plainly set, which is a genuinely
+confusing five minutes.
 
 ### Order of operations
 

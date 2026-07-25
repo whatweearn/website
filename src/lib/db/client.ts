@@ -27,7 +27,13 @@ export function hasDatabase(): boolean {
 export function migrationDb(): postgres.Sql {
   const url = process.env.DATABASE_URL_DIRECT ?? process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set. See .env.example.");
-  return postgres(url, { max: 1, idle_timeout: 20, debug: false });
+  return postgres(url, {
+    max: 1,
+    idle_timeout: 20,
+    debug: false,
+    // "already exists, skipping" is expected on a re-run and is not a failure.
+    onnotice: () => {},
+  });
 }
 
 export function db(): postgres.Sql {
