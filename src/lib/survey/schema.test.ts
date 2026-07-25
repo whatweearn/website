@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { COUNTRIES, citiesFor } from "./options";
-import { implausibilities, responseSchema, submissionSchema } from "./schema";
+import {
+  implausibilities,
+  responseSchema,
+  submissionSchema,
+  submittableResponseSchema,
+} from "./schema";
 
 const minimal = {
   country: "DE",
@@ -80,22 +85,36 @@ describe("implausibilities", () => {
     );
   });
 
-  it("flags a base salary that looks like a monthly figure", () => {
+  it("flags an annual figure that is too low to be one", () => {
     expect(implausibilities({ ...minimal, baseSalary: 2_500 })).toContain(
-      "base_salary_looks_monthly",
+      "annual_pay_unusually_low",
     );
+  });
+
+  it("judges by converted value, not by the raw number", () => {
+    // 12,000,000 forint is an ordinary Hungarian salary. The previous check
+    // compared the raw number to a euro-scale threshold and got this wrong.
+    expect(
+      implausibilities({ ...minimal, baseSalary: 12_000_000, currency: "HUF" }),
+    ).toEqual([]);
   });
 
   it("flags a bonus larger than three times base", () => {
     expect(implausibilities({ ...minimal, bonus: 300_000 })).toContain("bonus_exceeds_3x_base");
   });
 
-  it("only flags — it never rejects", () => {
+  it("flags an unusual response without refusing it", () => {
     // Losing a real data point to protect against something the aggregation
-    // layer already handles would be the wrong trade.
-    const odd = { ...minimal, level: "junior" as const, yearsExperience: 30, baseSalary: 1_000 };
+    // already handles would be the wrong trade.
+    const odd = { ...minimal, level: "junior" as const, yearsExperience: 30, baseSalary: 6_000 };
     expect(implausibilities(odd).length).toBeGreaterThan(0);
-    expect(responseSchema.safeParse(odd).success).toBe(true);
+    expect(submittableResponseSchema.safeParse(odd).success).toBe(true);
+  });
+
+  it("refuses a figure that is impossible rather than merely unusual", () => {
+    // €200 a year is a typo, not a salary, and it would drag a median.
+    const typo = { ...minimal, baseSalary: 200 };
+    expect(submittableResponseSchema.safeParse(typo).success).toBe(false);
   });
 });
 

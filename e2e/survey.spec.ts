@@ -221,11 +221,13 @@ test.describe("pay quoted per day", () => {
     await next(page);
 
     await page.getByRole("spinbutton").first().fill("650");
-    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+    // 650 a year is not a salary, and the sanity check says so.
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
 
     await page.getByLabel("Pay period").selectOption("day");
     await expect(page.getByLabel(/Days you billed/)).toBeVisible();
-    // Annualising on a guessed working year would swing the figure by 15%.
+    // Still blocked: annualising on a guessed working year would swing the
+    // figure by 15%, so the count is required rather than assumed.
     await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
 
     await page.getByLabel(/Days you billed/).fill("210");
@@ -247,6 +249,69 @@ test.describe("pay quoted per day", () => {
     await page.getByRole("spinbutton").first().fill("78000");
     await expect(page.getByLabel(/Days you billed/)).toHaveCount(0);
     await expect(page.getByLabel(/Hours you billed/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+});
+
+test.describe("salary sanity checks", () => {
+  async function reachSalary(page: Page, country: string) {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption(country);
+    await next(page);
+    await next(page);
+    await page.getByText("Permanent employee").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+  }
+
+  test("blocks an obviously impossible figure and says why", async ({ page }) => {
+    await reachSalary(page, "DE");
+    await page.getByRole("spinbutton").first().fill("200");
+
+    await expect(page.getByText(/works out to about/)).toBeVisible();
+    // Caught on the screen that asks, not after eight more questions.
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
+  });
+
+  test("clears once the figure is corrected", async ({ page }) => {
+    await reachSalary(page, "DE");
+    await page.getByRole("spinbutton").first().fill("200");
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
+
+    await page.getByRole("spinbutton").first().fill("78000");
+    await expect(page.getByText(/works out to about/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("warns about an unusual figure but still lets it through", async ({ page }) => {
+    // The lowest-paid junior and the highest-paid principal are both real
+    // people whose answers we want.
+    await reachSalary(page, "DE");
+    await page.getByRole("spinbutton").first().fill("600000");
+
+    await expect(page.getByText(/very high/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("judges by converted value, not the raw number", async ({ page }) => {
+    // 12,000,000 forint is an ordinary Hungarian salary. A euro-scale
+    // threshold would have waved through nonsense and blocked this.
+    await reachSalary(page, "HU");
+    await page.getByRole("spinbutton").first().fill("12000000");
+
+    await expect(page.getByText(/works out to about/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("accepts a day rate that would be impossible as a yearly figure", async ({ page }) => {
+    await reachSalary(page, "FR");
+    await page.getByRole("spinbutton").first().fill("650");
+    await page.getByLabel("Pay period").selectOption("day");
+    await page.getByLabel(/Days you billed/).fill("210");
+
+    await expect(page.getByText(/works out to about/)).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
   });
 });

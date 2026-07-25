@@ -18,6 +18,7 @@ import {
   citiesFor,
   type CountryCode,
 } from "@/lib/survey/options";
+import { checkSalary } from "@/lib/survey/plausibility";
 import { submittableResponseSchema } from "@/lib/survey/schema";
 
 import { Button, cx } from "../ui";
@@ -117,6 +118,21 @@ export function SurveyWizard({
   // Defaults to a yearly figure: what most employees will answer, and what the
   // survey asked for before periods existed.
   const salaryPeriod = (draft.salaryPeriod as string | undefined) ?? "year";
+
+  // Checked as they type. Catching a mistyped figure on the screen that asks
+  // for it is worth far more than refusing the whole survey eight questions
+  // later, when they have already stopped thinking about the number.
+  const salaryCheck =
+    typeof draft.baseSalary === "number"
+      ? checkSalary({
+          baseSalary: draft.baseSalary,
+          salaryPeriod: salaryPeriod as never,
+          paymentsPerYear: draft.paymentsPerYear as number | undefined,
+          daysPerYear: draft.daysPerYear as number | undefined,
+          hoursPerYear: draft.hoursPerYear as number | undefined,
+          currency,
+        })
+      : null;
 
   async function submit() {
     setStatus("sending");
@@ -344,6 +360,20 @@ export function SurveyWizard({
           {/* The follow-up appears only when the period needs one, so an
               employee on an annual salary sees exactly what they saw before,
               and a freelancer is never asked to do the arithmetic. */}
+          {salaryCheck?.message && (
+            <p
+              role="status"
+              className={cx(
+                "max-w-[52ch] rounded-md px-4 py-3 text-xs leading-relaxed",
+                salaryCheck.verdict === "impossible"
+                  ? "bg-wash text-accent"
+                  : "bg-tint text-ink-2",
+              )}
+            >
+              {salaryCheck.message}
+            </p>
+          )}
+
           {salaryPeriod === "month" && (
             <Choice
               name="paymentsPerYear"
@@ -395,6 +425,7 @@ export function SurveyWizard({
       complete:
         typeof draft.baseSalary === "number" &&
         Boolean(currency) &&
+        salaryCheck?.verdict !== "impossible" &&
         (salaryPeriod === "year" ||
           (salaryPeriod === "month" && draft.paymentsPerYear != null) ||
           (salaryPeriod === "day" && draft.daysPerYear != null) ||

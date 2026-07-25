@@ -79,6 +79,24 @@ export default function MethodologyPage() {
         </p>
       </Section>
 
+      <Section heading="Obvious mistakes">
+        <p>
+          A figure is checked once it has been annualised and roughly converted to euro, because
+          neither check works alone: 200 a year is nonsense while 200 a day is an ordinary
+          contractor, and 3,000 is a fine monthly salary in euro but about €7.50 in forint.
+        </p>
+        <p>
+          Anything that lands outside roughly €1,000 to €3,000,000 a year is refused at
+          submission — that is a typo, and one of them in a small sample moves a median. Merely
+          unusual figures are accepted and flagged for review: the lowest-paid junior in Ukraine
+          and the highest-paid principal in Zurich are both real people whose answers we want.
+        </p>
+        <p>
+          The rates used for that check are approximate and never touch published figures, which
+          convert at the European Central Bank&rsquo;s stored daily rates.
+        </p>
+      </Section>
+
       <Section heading="Outliers">
         <p>
           Before any figure is computed, the lowest {TRIM_LOWER_PERCENTILE}% and highest{" "}

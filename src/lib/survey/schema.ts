@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { checkSalary } from "./plausibility";
 import {
   COMPANY_SIZES,
   COMPANY_STAGES,
@@ -81,14 +82,21 @@ export type SurveyResponse = z.infer<typeof responseSchema>;
  * Rejected at submission rather than annualised on a guess later, so the
  * person can still fix it while they are looking at the question.
  */
-export const submittableResponseSchema = responseSchema.refine(
+export const submittableResponseSchema = responseSchema
+  .refine((r) => checkSalary(r).verdict !== "impossible", {
+    // Refused, not flagged. A figure a hundred times off is a typo, and
+    // accepting it would put a €200-a-year salary into a median.
+    message: "That salary does not look right once converted to a yearly figure.",
+    path: ["baseSalary"],
+  })
+  .refine(
   (r) =>
     r.salaryPeriod === "month" ? r.paymentsPerYear != null
     : r.salaryPeriod === "day" ? r.daysPerYear != null
     : r.salaryPeriod === "hour" ? r.hoursPerYear != null
     : true,
   { message: "A rate quoted per month, day or hour needs its count.", path: ["baseSalary"] },
-);
+  );
 
 /** What the client actually posts: the answers plus the anti-abuse envelope. */
 export const submissionSchema = z.object({
@@ -123,9 +131,16 @@ export function implausibilities(response: SurveyResponse): string[] {
   if (response.level === "principal" && (response.yearsExperience ?? 99) < 3) {
     flags.push("principal_with_short_tenure");
   }
-  if (response.baseSalary > 0 && response.baseSalary < 3_000) {
-    // Almost certainly a monthly figure entered where an annual one was asked.
-    flags.push("base_salary_looks_monthly");
+  // Was a bare `baseSalary < 3_000`, which is currency-blind: 3,000 forint is
+  // about €7.50, so an ordinary Hungarian salary passed and a normal euro
+  // monthly figure was flagged. Judged on the annualised euro value instead.
+  const salary = checkSalary(response);
+  if (salary.verdict === "suspect") {
+    flags.push(
+      salary.annualEuro !== null && salary.annualEuro < 10_000
+        ? "annual_pay_unusually_low"
+        : "annual_pay_unusually_high",
+    );
   }
   if (response.bonus !== undefined && response.bonus > response.baseSalary * 3) {
     flags.push("bonus_exceeds_3x_base");
