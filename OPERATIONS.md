@@ -183,6 +183,33 @@ pnpm aggregate                # should report 1 response, 0 published
 
 ---
 
+### 1c. Vercel
+
+The repo is public, so Hobby can deploy it from the org. Note that Vercel's
+Hobby terms are for non-commercial use: this site is free and carries no ads,
+but it is operated by a company, so if that ever stops being obviously true,
+Pro is the honest answer.
+
+```
+pnpm dlx vercel@latest login
+pnpm dlx vercel@latest link      # scope: whatweearn
+./scripts/vercel-env.sh          # copies .env.local, with the URLs corrected
+pnpm dlx vercel@latest --prod
+```
+
+Vercel does not read `.env.local`. Every variable missing from its own store is
+a production-only failure, which is why the copy is scripted rather than done
+by hand.
+
+**Unlike GitHub, Vercel gets both sets of database credentials.** The
+aggregation workflow is deliberately given only `DATABASE_URL` so it cannot
+reach subscribers; the web app cannot work that way, because it serves both
+`/api/response` and `/api/subscribe`. The separation there is enforced at the
+module level instead — no file may import both clients, asserted by
+`src/lib/subscribers/boundary.test.ts` on every CI run. That is a weaker
+guarantee than withholding the credential, and it is the reason that test
+exists.
+
 ## 2. Backups
 
 **Two databases, two policies.** They fail independently and matter differently.
