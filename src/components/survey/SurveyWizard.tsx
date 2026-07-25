@@ -87,6 +87,8 @@ export function SurveyWizard({
   // show how close that country is to publishing.
   const [submittedCountry, setSubmittedCountry] = useState<string>();
   const [turnstileToken, setTurnstileToken] = useState<string>();
+  const [turnstileFailed, setTurnstileFailed] = useState(false);
+  const [turnstileAttempt, setTurnstileAttempt] = useState(0);
   const [error, setError] = useState<string>();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const seeded = useRef(false);
@@ -487,7 +489,8 @@ export function SurveyWizard({
   // When Turnstile is configured, wait for its token rather than letting
   // someone submit a finished survey and be told afterwards that we could not
   // verify them. Most people never see the widget; they just wait a moment.
-  const awaitingVerification = last && Boolean(turnstileSiteKey) && !turnstileToken;
+  const awaitingVerification =
+    last && Boolean(turnstileSiteKey) && !turnstileToken && !turnstileFailed;
 
   return (
     <div>
@@ -566,7 +569,38 @@ export function SurveyWizard({
 
       {turnstileSiteKey && (
         <div className="mt-8">
-          <Turnstile siteKey={turnstileSiteKey} onToken={setTurnstileToken} />
+          <Turnstile
+            siteKey={turnstileSiteKey}
+            attempt={turnstileAttempt}
+            onToken={(token) => {
+              setTurnstileToken(token);
+              if (token) setTurnstileFailed(false);
+            }}
+            onFailure={() => setTurnstileFailed(true)}
+          />
+
+          {turnstileFailed && (
+            <div
+              role="alert"
+              className="mx-auto mt-4 max-w-[52ch] rounded-md bg-wash px-4 py-3 text-xs leading-relaxed text-ink-2"
+            >
+              <b className="font-semibold text-ink">We could not check your browser.</b> This is
+              almost always a privacy extension or network filter blocking{" "}
+              <code className="font-mono">challenges.cloudflare.com</code>. Allow it and try
+              again — your answers are still here.
+              <button
+                type="button"
+                onClick={() => {
+                  setTurnstileFailed(false);
+                  setTurnstileToken(undefined);
+                  setTurnstileAttempt((n) => n + 1);
+                }}
+                className="mt-3 block rounded-full border border-line-2 px-4 py-2 font-semibold text-ink transition-colors hover:bg-tint"
+              >
+                Try the check again
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

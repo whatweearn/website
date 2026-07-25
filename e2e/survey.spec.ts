@@ -396,3 +396,31 @@ test.describe("legal pages", () => {
     await expect(page.getByRole("link", { name: "Imprint" })).toBeVisible();
   });
 });
+
+test.describe("when the browser check cannot run", () => {
+  test("explains rather than hanging on a disabled button", async ({ page, context }) => {
+    // Blocking Cloudflare reproduces what a privacy extension does. Before
+    // this, the button sat on "Checking your browser…" forever with no
+    // explanation and no way out.
+    await context.route("https://challenges.cloudflare.com/**", (route) => route.abort());
+
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("BE");
+    await next(page);
+    await next(page);
+    await page.getByText("Permanent employee").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+    await page.getByRole("spinbutton").first().fill("72000");
+    await next(page);
+    await next(page);
+    await next(page);
+
+    await expect(page.getByText(/could not check your browser/i)).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByRole("button", { name: /Try the check again/ })).toBeVisible();
+    // Their answers are still on screen; nothing was lost.
+    await expect(page.getByText("Question 9 of 9")).toBeVisible();
+  });
+});

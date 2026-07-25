@@ -49,18 +49,37 @@ function loadScript(): Promise<void> {
  *
  * The widget is interaction-only: most people will never see it.
  */
+/** How long to wait before telling someone it is not going to work. */
+const GIVE_UP_MS = 15_000;
+
 export function Turnstile({
   siteKey,
   onToken,
+  onFailure,
+  attempt = 0,
 }: {
   siteKey: string;
   onToken: (token: string | undefined) => void;
+  /**
+   * Called when no token is coming — script blocked, wrong hostname, or
+   * Cloudflare unreachable. Without this the submit button waits forever on
+   * "Checking your browser…", which is what a privacy extension blocking
+   * challenges.cloudflare.com actually produces.
+   */
+  onFailure?: () => void;
+  /** Changing this remounts the widget, for a retry. */
+  attempt?: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<string>(undefined);
 
   useEffect(() => {
     let cancelled = false;
+    let solved = false;
+
+    const giveUp = setTimeout(() => {
+      if (!cancelled && !solved) onFailure?.();
+    }, GIVE_UP_MS);
 
     loadScript()
       .then(() => {
@@ -69,26 +88,42 @@ export function Turnstile({
           sitekey: siteKey,
           appearance: "interaction-only",
           theme: "auto",
-          callback: (token) => onToken(token),
-          "error-callback": () => onToken(undefined),
-          "expired-callback": () => onToken(undefined),
+          callback: (token) => {
+            solved = true;
+            clearTimeout(giveUp);
+            onToken(token);
+          },
+          "error-callback": () => {
+            clearTimeout(giveUp);
+            onToken(undefined);
+            onFailure?.();
+          },
+          "expired-callback": () => {
+            solved = false;
+            onToken(undefined);
+          },
         });
       })
       .catch(() => {
-        // Network blocked or Cloudflare unreachable. Leave the token unset —
-        // the server decides, and in production it refuses. Failing loudly at
-        // submit is better than pretending we verified something.
-        if (!cancelled) onToken(undefined);
+        // Script blocked or Cloudflare unreachable. Say so rather than leaving
+        // someone staring at a disabled button: we never pretend to have
+        // verified, but we do owe them an explanation.
+        if (!cancelled) {
+          clearTimeout(giveUp);
+          onToken(undefined);
+          onFailure?.();
+        }
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(giveUp);
       if (widgetRef.current && window.turnstile) {
         window.turnstile.remove(widgetRef.current);
         widgetRef.current = undefined;
       }
     };
-  }, [siteKey, onToken]);
+  }, [siteKey, onToken, onFailure, attempt]);
 
   return <div ref={containerRef} className="flex justify-center" />;
 }

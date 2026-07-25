@@ -14,9 +14,7 @@ claims being true and being marketing.
 
 - [x] Controller configured — **Codeetry SRL**, Mont-Saint-Guibert, Belgium, enterprise
       number 0880.250.749. Set 2026-07-25; the "not ready to collect data" alert is gone.
-- [ ] **`LEGAL_CONTROLLER_ADDRESS` still holds only a town.** Belgian Book XII and the German
-      DDG both require a *geographic* address — street and number — at which the operator can
-      be reached. Fill it in before launch.
+- [x] Full geographic address set: 8 Boucle Jean-François Breuer, 1435 Mont-Saint-Guibert.
 - [ ] A monitored inbox behind `privacy@whatweearn.eu`. Erasure requests arrive there, and an
       unanswered one is a complaint to the Belgian DPA waiting to happen.
 - [ ] Confirm with a lawyer that the imprint satisfies Belgian Book XII, and that operating
@@ -41,7 +39,12 @@ without the first two rather than falling back to development values.
 - [ ] `FORM_TOKEN_SECRET`
 - [ ] `IDENTITY_SECRET`
 - [ ] `SUBSCRIBER_TOKEN_SECRET`
-- [ ] `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+- [x] `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — issued 2026-07-25.
+      **Rotate the secret before launch:** it was pasted into a chat transcript, which is a
+      copy nobody controls. Rotation in the Cloudflare dashboard takes seconds.
+      Add `localhost` to the key's allowed hostnames if you want the widget to solve during
+      local development; without it the survey correctly shows the "could not check your
+      browser" path, which is worth seeing once anyway.
 - [ ] `RESEND_API_KEY`, `EMAIL_FROM`
 - [ ] `NEXT_PUBLIC_SITE_URL=https://whatweearn.eu`
 
