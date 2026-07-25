@@ -21,14 +21,16 @@ export class PostgresResponseRepository implements ResponseRepository {
       INSERT INTO responses (
         submitted_on, handle, country, city, work_setup, pay_location_adjusted,
         contract_type, fte_percent, discipline, primary_language, level,
-        years_experience, base_salary, currency, payments_per_year, bonus,
+        years_experience, base_salary, currency, salary_period, payments_per_year,
+        days_per_year, hours_per_year, bonus,
         equity_annual, company_stage, company_size, industry, flags
       ) VALUES (
         ${record.submittedOn}, ${record.handle}, ${r.country}, ${r.city ?? null},
         ${r.workSetup ?? null}, ${r.payLocationAdjusted ?? null},
         ${r.contractType}, ${r.ftePercent ?? null}, ${r.discipline ?? null},
         ${r.primaryLanguage ?? null}, ${r.level}, ${r.yearsExperience ?? null},
-        ${r.baseSalary}, ${r.currency}, ${r.paymentsPerYear ?? null},
+        ${r.baseSalary}, ${r.currency}, ${r.salaryPeriod ?? null},
+        ${r.paymentsPerYear ?? null}, ${r.daysPerYear ?? null}, ${r.hoursPerYear ?? null},
         ${r.bonus ?? null}, ${r.equityAnnual ?? null}, ${r.companyStage ?? null},
         ${r.companySize ?? null}, ${r.industry ?? null}, ${record.flags}
       )
@@ -109,6 +111,10 @@ export async function loadMicrodataRows(): Promise<import("../stats/microdata").
       industry,
       years_experience AS "yearsExperience",
       base_salary      AS "baseSalary",
+      salary_period    AS "salaryPeriod",
+      payments_per_year AS "paymentsPerYear",
+      days_per_year    AS "daysPerYear",
+      hours_per_year   AS "hoursPerYear",
       bonus,
       equity_annual    AS "equityAnnual",
       currency

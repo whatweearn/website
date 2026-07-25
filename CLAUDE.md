@@ -189,7 +189,7 @@ bounded choice or a number — no free text.
 | 3 | Contract | Permanent / fixed-term / contractor / B2B; FTE % | **Essential.** See above |
 | 4 | Role | Discipline (backend/frontend/full-stack/data/ML/infra/mobile/embedded/security/QA); primary language | |
 | 5 | Seniority | Level (ladder with descriptions, not titles); years writing software professionally | Titles are not comparable across companies; descriptions are |
-| 6 | Base salary | Amount + currency + payments per year (12/13/14) | Label: **gross, annual** |
+| 6 | Base salary | Amount + currency + period (year/month/day/hour), plus the multiplier that period needs | Freelancers think in day rates; forcing an annual figure made them guess a working year |
 | 7 | Bonus | Amount actually paid last 12 months (0 allowed) | "Actually paid", never target |
 | 8 | Equity | Annualised value; company public/private | Optional. Skip = no equity |
 | 9 | Company | Headcount bracket; industry | No name, ever |

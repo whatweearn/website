@@ -1,3 +1,4 @@
+import { type RateInput, annualise } from "../survey/annualise";
 import { COUNTRIES } from "../survey/options";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
 import { type RateTable, totalCompEuro } from "../fx/convert";
@@ -5,12 +6,11 @@ import { type CountryRow, type Cut, type Distribution, type SiteStats, cutKey } 
 
 import { bins, summarise, trim } from "./quantiles";
 
-export type AggregateRow = {
+export type AggregateRow = RateInput & {
   country: string;
   level: string;
   contractType: string;
   ftePercent: number | null;
-  baseSalary: number;
   bonus: number | null;
   equityAnnual: number | null;
   currency: string;
@@ -69,8 +69,20 @@ export function aggregate(rows: readonly AggregateRow[], rates: RateTable): Aggr
       bump(EMPLOYEE_CONTRACTS.has(row.contractType) ? "part_time" : "non_employee_contract");
       continue;
     }
+    // A rate quoted per day or hour without its count cannot be annualised,
+    // and guessing the multiplier would publish a number nobody supplied.
+    const annual = annualise(row);
+    if (!annual.ok) {
+      bump(annual.reason);
+      continue;
+    }
+
     try {
-      eligible.push({ country: row.country, level: row.level, total: totalCompEuro(row, rates) });
+      eligible.push({
+        country: row.country,
+        level: row.level,
+        total: totalCompEuro({ ...row, annualBase: annual.annual }, rates),
+      });
     } catch {
       bump("missing_exchange_rate");
     }

@@ -190,6 +190,9 @@ export function MoneyField({
   currency,
   onCurrencyChange,
   currencies,
+  period,
+  onPeriodChange,
+  periods,
 }: {
   name: string;
   value?: number;
@@ -197,6 +200,10 @@ export function MoneyField({
   currency: string;
   onCurrencyChange?: (value: string) => void;
   currencies: readonly string[];
+  /** When supplied, the amount is quoted per this period rather than per year. */
+  period?: string;
+  onPeriodChange?: (value: string) => void;
+  periods?: readonly { value: string; label: string }[];
 }) {
   return (
     <span className="inline-flex flex-wrap items-center gap-3">
@@ -228,7 +235,23 @@ export function MoneyField({
       ) : (
         <span className="text-xs text-ink-3">{currency}</span>
       )}
-      <span className="text-xs text-ink-3">gross, per year</span>
+
+      {periods && onPeriodChange ? (
+        <select
+          aria-label="Pay period"
+          value={period}
+          onChange={(e) => onPeriodChange(e.target.value)}
+          className="rounded-md border border-line bg-surface px-3 py-3 text-base text-ink transition-colors hover:border-line-2"
+        >
+          {periods.map((p) => (
+            <option key={p.value} value={p.value}>
+              {p.label}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span className="text-xs text-ink-3">gross, per year</span>
+      )}
     </span>
   );
 }

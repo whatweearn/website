@@ -13,11 +13,12 @@ import {
   LANGUAGES,
   LEVELS,
   PAYMENTS_PER_YEAR,
+  SALARY_PERIODS,
   WORK_SETUPS,
   citiesFor,
   type CountryCode,
 } from "@/lib/survey/options";
-import { responseSchema } from "@/lib/survey/schema";
+import { submittableResponseSchema } from "@/lib/survey/schema";
 
 import { Button, cx } from "../ui";
 import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
@@ -113,11 +114,15 @@ export function SurveyWizard({
   // shown as already filled in.
   const currency = (draft.currency as string | undefined) ?? defaultCurrency(country);
 
+  // Defaults to a yearly figure: what most employees will answer, and what the
+  // survey asked for before periods existed.
+  const salaryPeriod = (draft.salaryPeriod as string | undefined) ?? "year";
+
   async function submit() {
     setStatus("sending");
     setError(undefined);
 
-    const parsed = responseSchema.safeParse({ ...answersOf(draft), currency });
+    const parsed = submittableResponseSchema.safeParse({ ...answersOf(draft), currency });
     if (!parsed.success) {
       const field = String(parsed.error.issues[0]?.path[0] ?? "");
       const target = STEP_OF_FIELD[field];
@@ -321,7 +326,7 @@ export function SurveyWizard({
     },
     {
       title: "What is your base salary?",
-      hint: "Gross, before tax, for a full year.",
+      hint: "Gross, before tax. Quote it however you normally think about it.",
       body: (
         <>
           <MoneyField
@@ -331,8 +336,16 @@ export function SurveyWizard({
             currency={currency}
             onCurrencyChange={(v) => set("currency", v)}
             currencies={CURRENCIES}
+            period={salaryPeriod}
+            onPeriodChange={(v) => set("salaryPeriod", v)}
+            periods={SALARY_PERIODS}
           />
-          <Choice
+
+          {/* The follow-up appears only when the period needs one, so an
+              employee on an annual salary sees exactly what they saw before,
+              and a freelancer is never asked to do the arithmetic. */}
+          {salaryPeriod === "month" && (
+            <Choice
               name="paymentsPerYear"
               label="Payments per year"
               hint="Spain, Portugal, Italy, Austria and Greece often pay 13 or 14."
@@ -340,9 +353,52 @@ export function SurveyWizard({
               onChange={(v) => set("paymentsPerYear", Number(v))}
               options={PAYMENTS_PER_YEAR.map((p) => ({ value: String(p), label: String(p) }))}
             />
+          )}
+
+          {salaryPeriod === "day" && (
+            <Field
+              label="Days you billed last year"
+              htmlFor="daysPerYear"
+              hint="Actual billed days, not a target — we multiply by this rather than guess a working year."
+              required
+            >
+              <NumberField
+                name="daysPerYear"
+                value={draft.daysPerYear as number}
+                onChange={(v) => set("daysPerYear", v)}
+                min={1}
+                max={365}
+                suffix="days"
+              />
+            </Field>
+          )}
+
+          {salaryPeriod === "hour" && (
+            <Field
+              label="Hours you billed last year"
+              htmlFor="hoursPerYear"
+              hint="Actual billed hours. Around 1,600 is a full year at 40 hours a week with holidays."
+              required
+            >
+              <NumberField
+                name="hoursPerYear"
+                value={draft.hoursPerYear as number}
+                onChange={(v) => set("hoursPerYear", v)}
+                min={1}
+                max={4000}
+                suffix="hours"
+              />
+            </Field>
+          )}
         </>
       ),
-      complete: typeof draft.baseSalary === "number" && Boolean(currency),
+      complete:
+        typeof draft.baseSalary === "number" &&
+        Boolean(currency) &&
+        (salaryPeriod === "year" ||
+          (salaryPeriod === "month" && draft.paymentsPerYear != null) ||
+          (salaryPeriod === "day" && draft.daysPerYear != null) ||
+          (salaryPeriod === "hour" && draft.hoursPerYear != null)),
     },
     {
       title: "Any bonus?",

@@ -164,6 +164,19 @@ export const CURRENCIES = [
  */
 export const PAYMENTS_PER_YEAR = [12, 13, 14] as const;
 
+/**
+ * How the amount was quoted.
+ *
+ * "Per year" stays the default so nothing changes for an employee, while a
+ * freelancer on a day rate no longer has to do the arithmetic themselves.
+ */
+export const SALARY_PERIODS = [
+  { value: "year", label: "a year" },
+  { value: "month", label: "a month" },
+  { value: "day", label: "a day" },
+  { value: "hour", label: "an hour" },
+] as const;
+
 export const COMPANY_SIZES = [
   { value: "micro", label: "1–10" },
   { value: "small", label: "11–50" },

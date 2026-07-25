@@ -120,7 +120,7 @@ const ASKS = [
   { label: "Permanent, contract, or B2B" },
   { label: "What you work on, and in what" },
   { label: "Level and years of experience" },
-  { label: "Base salary, gross annual" },
+  { label: "Base salary — yearly, monthly, daily or hourly" },
   { label: "Bonus actually paid last year" },
   { label: "Equity, annualised", optional: true },
   { label: "Company size and industry" },

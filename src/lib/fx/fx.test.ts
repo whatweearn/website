@@ -29,24 +29,23 @@ describe("totalCompEuro", () => {
   it("sums base, bonus and equity", () => {
     expect(
       totalCompEuro(
-        { baseSalary: 60_000, bonus: 8_000, equityAnnual: 12_000, currency: "EUR" },
+        { annualBase: 60_000, bonus: 8_000, equityAnnual: 12_000, currency: "EUR" },
         RATES,
       ),
     ).toBe(80_000);
   });
 
   it("treats absent bonus and equity as zero, not as missing data", () => {
-    expect(totalCompEuro({ baseSalary: 60_000, currency: "EUR" }, RATES)).toBe(60_000);
+    expect(totalCompEuro({ annualBase: 60_000, currency: "EUR" }, RATES)).toBe(60_000);
     expect(
-      totalCompEuro({ baseSalary: 60_000, bonus: null, equityAnnual: null, currency: "EUR" }, RATES),
+      totalCompEuro({ annualBase: 60_000, bonus: null, equityAnnual: null, currency: "EUR" }, RATES),
     ).toBe(60_000);
   });
 
-  it("does not multiply by payments per year", () => {
-    // The entered base is already annual. Multiplying by 14 would inflate
-    // every Spanish and Portuguese salary by 17%.
-    const spanish = totalCompEuro({ baseSalary: 42_000, currency: "EUR" }, RATES);
-    expect(spanish).toBe(42_000);
+  it("leaves annualisation to the survey layer", () => {
+    // Currency conversion knows nothing about how pay was quoted. Splitting
+    // the two means neither has to understand the other.
+    expect(totalCompEuro({ annualBase: 42_000, currency: "EUR" }, RATES)).toBe(42_000);
   });
 });
 

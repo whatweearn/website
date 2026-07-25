@@ -10,6 +10,7 @@ import {
   INDUSTRIES,
   LANGUAGES,
   LEVELS,
+  SALARY_PERIODS,
   WORK_SETUPS,
   valuesOf,
 } from "./options";
@@ -50,10 +51,15 @@ export const responseSchema = z.object({
   level: z.enum(valuesOf(LEVELS)),
   yearsExperience: z.number().int().min(0).max(60).optional(),
 
-  // 6 — base salary
+  // 6 — base salary, as the person actually thinks about it
   baseSalary: money,
   currency: z.enum(CURRENCIES),
+  salaryPeriod: z.enum(valuesOf(SALARY_PERIODS)).optional(),
   paymentsPerYear: z.union([z.literal(12), z.literal(13), z.literal(14)]).optional(),
+  /** Days actually billed last year, for a day rate. */
+  daysPerYear: z.number().int().min(1).max(365).optional(),
+  /** Hours actually billed last year, for an hourly rate. */
+  hoursPerYear: z.number().int().min(1).max(4000).optional(),
 
   // 7 — bonus
   bonus: money.optional(),
@@ -69,9 +75,24 @@ export const responseSchema = z.object({
 
 export type SurveyResponse = z.infer<typeof responseSchema>;
 
+/**
+ * A rate needs its multiplier.
+ *
+ * Rejected at submission rather than annualised on a guess later, so the
+ * person can still fix it while they are looking at the question.
+ */
+export const submittableResponseSchema = responseSchema.refine(
+  (r) =>
+    r.salaryPeriod === "month" ? r.paymentsPerYear != null
+    : r.salaryPeriod === "day" ? r.daysPerYear != null
+    : r.salaryPeriod === "hour" ? r.hoursPerYear != null
+    : true,
+  { message: "A rate quoted per month, day or hour needs its count.", path: ["baseSalary"] },
+);
+
 /** What the client actually posts: the answers plus the anti-abuse envelope. */
 export const submissionSchema = z.object({
-  response: responseSchema,
+  response: submittableResponseSchema,
   /** Signed at page render; proves the form was served by us and when. */
   formToken: z.string().min(1),
   /** Turnstile result. Absent only when Turnstile is not configured. */

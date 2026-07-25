@@ -205,3 +205,48 @@ test.describe("the notification list", () => {
     await expect(page.getByText(/never about your own answers/)).toBeVisible();
   });
 });
+
+test.describe("pay quoted per day", () => {
+  test("asks for the multiplier and will not proceed without it", async ({ page }) => {
+    // The population this exists for: a freelancer who thinks in a day rate and
+    // has no idea what their "annual salary" is.
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("FR");
+    await next(page);
+    await next(page);
+    await page.getByText("Contractor / freelance").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+
+    await page.getByRole("spinbutton").first().fill("650");
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+
+    await page.getByLabel("Pay period").selectOption("day");
+    await expect(page.getByLabel(/Days you billed/)).toBeVisible();
+    // Annualising on a guessed working year would swing the figure by 15%.
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
+
+    await page.getByLabel(/Days you billed/).fill("210");
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("leaves an annual salary exactly as it was", async ({ page }) => {
+    // Progressive disclosure: an employee must see no extra questions.
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("DE");
+    await next(page);
+    await next(page);
+    await page.getByText("Permanent employee").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+
+    await page.getByRole("spinbutton").first().fill("78000");
+    await expect(page.getByLabel(/Days you billed/)).toHaveCount(0);
+    await expect(page.getByLabel(/Hours you billed/)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+});

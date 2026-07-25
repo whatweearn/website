@@ -48,11 +48,18 @@ export default function MethodologyPage() {
       <Section heading="What total compensation means here">
         <Points
           items={[
-            ["Included", "Gross annual base salary, plus bonus actually paid in the last twelve months, plus annualised equity."],
+            [
+              "Included",
+              "Gross base pay, plus bonus actually paid in the last twelve months, plus annualised equity.",
+            ],
+            [
+              "However you are paid",
+              "Base pay can be quoted per year, month, day or hour. Asking everyone for an annual figure forced a conversion in their head — worst of all for freelancers and B2B contractors, who think in day rates and would have had to guess a working year.",
+            ],
             ["Not included", "Pension contributions, benefits, and anything not asked for. Employer social contributions are excluded, which is part of why B2B figures are not comparable."],
             [
-              "Payments per year",
-              "Asked because 13th and 14th month salaries are normal in Spain, Portugal, Italy, Austria and Greece. It is context, not a multiplier — the figure entered is already the annual total.",
+              "The multiplier is asked for, never assumed",
+              "A monthly figure needs the number of payments (12, 13 or 14 — the last two are normal in Spain, Portugal, Italy, Austria and Greece). A day rate needs the days actually billed last year; an hourly rate, the hours. €600 a day is €120,000 over 200 days and €138,000 over 230, and picking between those on someone's behalf would be publishing a figure nobody supplied. Where the count is missing, the response is left out of the figures rather than annualised on a guess.",
             ],
           ]}
         />

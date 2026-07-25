@@ -23,21 +23,22 @@ export function toEuro(amount: number, currency: string, rates: RateTable): numb
 }
 
 export type CompensationInput = {
-  baseSalary: number;
+  /** Already annualised. See survey/annualise.ts. */
+  annualBase: number;
   bonus?: number | null;
   equityAnnual?: number | null;
   currency: string;
 };
 
 /**
- * Total compensation in euro: base plus bonus plus annualised equity.
+ * Total compensation in euro: annual base plus bonus plus annualised equity.
  *
- * The entered base is already an annual figure, so `paymentsPerYear` is *not*
- * a multiplier — it is context for interpreting local norms and for flagging
- * someone who entered a monthly amount. Multiplying here would inflate every
- * Spanish and Portuguese salary by 17%.
+ * The base arrives already annualised, because how it was quoted — yearly,
+ * monthly, daily, hourly — and the multiplier that converts it are survey
+ * concerns, not currency ones. Keeping them apart means neither has to know
+ * about the other.
  */
 export function totalCompEuro(input: CompensationInput, rates: RateTable): number {
-  const gross = input.baseSalary + (input.bonus ?? 0) + (input.equityAnnual ?? 0);
+  const gross = input.annualBase + (input.bonus ?? 0) + (input.equityAnnual ?? 0);
   return Math.round(toEuro(gross, input.currency, rates));
 }
