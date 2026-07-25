@@ -26,11 +26,12 @@
   --wwe-tint-2: #efebe7;
   --wwe-ink: #1b1d22;
   --wwe-ink-2: #5e6068;
-  --wwe-ink-3: #8d9098;
+  --wwe-ink-3: #686a70;
   --wwe-line: #e9e6e2;
   --wwe-line-2: #dad5d0;
   --wwe-coral: #e8604c;
-  --wwe-accent: #c9442e;
+  --wwe-accent: #c3422d;
+  --wwe-accent-hover: #a63722;
   --wwe-on-accent: #ffffff;
   --wwe-on-ink: #fcfcfa;
   --wwe-wash: #fdf1ee;
@@ -41,6 +42,11 @@
   --wwe-shadow-lg: 0 2px 6px rgb(27 29 34 / 0.04), 0 30px 64px -28px rgb(27 29 34 / 0.24);
   --wwe-glow: radial-gradient(60% 55% at 50% 22%, rgb(232 96 76 / 0.1), transparent 72%);
 
+  /* Native controls, scrollbars and autofill follow the theme. Without this,
+     a select keeps light-mode chrome on a dark page and every form control
+     fails contrast. */
+  color-scheme: light;
+
   /* How far the distribution card rides up over the tinted band's edge. The
      hero spacer is derived from this, so the card can never overlap the copy
      above it at any viewport width. */
@@ -49,17 +55,19 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --wwe-bg: #131417;
     --wwe-surface: #1b1d21;
     --wwe-tint: #17181c;
     --wwe-tint-2: #232529;
     --wwe-ink: #f1f0ed;
     --wwe-ink-2: #a8abb2;
-    --wwe-ink-3: #7e818a;
+    --wwe-ink-3: #898c96;
     --wwe-line: #2a2d33;
     --wwe-line-2: #383c43;
     --wwe-coral: #ff7a63;
     --wwe-accent: #ff8f79;
+    --wwe-accent-hover: #ff7a63;
     --wwe-on-accent: #24100a;
     --wwe-on-ink: #17181c;
     --wwe-wash: rgb(255 122 99 / 0.13);
@@ -75,17 +83,19 @@
 /* The explicit attribute must beat the media query in BOTH directions, which
    is why light is restated rather than left to fall through. */
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --wwe-bg: #131417;
   --wwe-surface: #1b1d21;
   --wwe-tint: #17181c;
   --wwe-tint-2: #232529;
   --wwe-ink: #f1f0ed;
   --wwe-ink-2: #a8abb2;
-  --wwe-ink-3: #7e818a;
+  --wwe-ink-3: #898c96;
   --wwe-line: #2a2d33;
   --wwe-line-2: #383c43;
   --wwe-coral: #ff7a63;
   --wwe-accent: #ff8f79;
+  --wwe-accent-hover: #ff7a63;
   --wwe-on-accent: #24100a;
   --wwe-on-ink: #17181c;
   --wwe-wash: rgb(255 122 99 / 0.13);
@@ -98,17 +108,19 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --wwe-bg: #fcfcfa;
   --wwe-surface: #ffffff;
   --wwe-tint: #f6f3f1;
   --wwe-tint-2: #efebe7;
   --wwe-ink: #1b1d22;
   --wwe-ink-2: #5e6068;
-  --wwe-ink-3: #8d9098;
+  --wwe-ink-3: #686a70;
   --wwe-line: #e9e6e2;
   --wwe-line-2: #dad5d0;
   --wwe-coral: #e8604c;
-  --wwe-accent: #c9442e;
+  --wwe-accent: #c3422d;
+  --wwe-accent-hover: #a63722;
   --wwe-on-accent: #ffffff;
   --wwe-on-ink: #fcfcfa;
   --wwe-wash: #fdf1ee;
@@ -132,6 +144,7 @@
   --color-line-2: var(--wwe-line-2);
   --color-coral: var(--wwe-coral);
   --color-accent: var(--wwe-accent);
+  --color-accent-hover: var(--wwe-accent-hover);
   --color-on-accent: var(--wwe-on-accent);
   --color-on-ink: var(--wwe-on-ink);
   --color-wash: var(--wwe-wash);
@@ -151,7 +164,7 @@
   --text-2xs: 0.75rem;
   --text-xs: clamp(0.82rem, 0.8rem + 0.08vw, 0.875rem);
   --text-base: clamp(1rem, 0.97rem + 0.14vw, 1.075rem);
-  --text-lg: clamp(1.15rem, 1.09rem + 0.3vw, 1.35rem);
+  --text-lg: clamp(1.2rem, 1.13rem + 0.3vw, 1.35rem);
   --text-xl: clamp(1.6rem, 1.4rem + 0.9vw, 2.2rem);
   --text-2xl: clamp(2rem, 1.7rem + 1.6vw, 3rem);
   --text-3xl: clamp(2.6rem, 2rem + 3.2vw, 4.4rem);

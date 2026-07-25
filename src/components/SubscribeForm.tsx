@@ -76,7 +76,7 @@ export function SubscribeForm() {
           disabled={state === "sending"}
           className={cx(
             "rounded-full bg-accent px-6 py-3 font-display text-xs font-semibold text-on-accent",
-            "transition-colors hover:bg-coral disabled:opacity-40",
+            "transition-colors hover:bg-accent-hover disabled:opacity-40",
           )}
         >
           {state === "sending" ? "Sending…" : "Notify me"}

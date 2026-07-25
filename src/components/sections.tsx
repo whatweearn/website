@@ -21,9 +21,9 @@ export function Nav() {
           aria-label="whatweearn, home"
           className="py-1 font-display text-[1.24rem] font-semibold tracking-[-0.03em] text-ink no-underline"
         >
-          what<span className="text-coral">we</span>earn
+          what<span className="text-accent">we</span>earn
         </a>
-        <nav className="flex items-center gap-6 text-xs">
+        <nav className="flex items-center gap-3 text-xs min-[400px]:gap-6">
           <a
             href="#survey"
             className="hidden text-ink-2 no-underline transition-colors hover:text-ink min-[760px]:inline"
@@ -38,7 +38,10 @@ export function Nav() {
           </Link>
           <ThemeToggle />
           <Button href="/survey" variant="ink" size="sm">
-            Add your salary
+            {/* WCAG 2.2 reflow: at 320px the full label pushes the nav past
+                the viewport. Same destination, fewer words. */}
+            <span className="min-[400px]:hidden">Add yours</span>
+            <span className="hidden min-[400px]:inline">Add your salary</span>
           </Button>
         </nav>
       </div>

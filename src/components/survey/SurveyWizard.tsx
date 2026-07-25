@@ -476,7 +476,7 @@ export function SurveyWizard({
           disabled={!current.complete || status === "sending" || awaitingVerification}
           className={cx(
             "inline-flex items-center gap-2 rounded-full px-6 py-3 font-display text-base font-semibold",
-            "bg-accent text-on-accent transition-[background-color,transform] hover:bg-coral",
+            "bg-accent text-on-accent transition-[background-color,transform] hover:bg-accent-hover",
             "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-accent",
           )}
         >

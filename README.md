@@ -35,6 +35,13 @@ pnpm dev
 | `pnpm db:migrate:subscribers` | Apply subscriber-database migrations (separate instance) |
 | `pnpm aggregate` | Rebuild `src/data/stats.json` from the database |
 
+## Operations
+
+Deployment, backups, monitoring and incident response are in
+[`OPERATIONS.md`](./OPERATIONS.md), including the launch checklist. The site
+will not present itself as ready to collect data until a data controller is
+configured.
+
 ## Licence
 
 Code is MIT — see [`LICENSE`](./LICENSE).

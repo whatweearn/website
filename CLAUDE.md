@@ -326,8 +326,29 @@ first send; the double opt-in confirmation goes out immediately so the sender na
 recognised a year later; and a short mid-cycle note so the results blast is not the first
 contact in twelve months. Add a lint/test asserting we never call Resend's Audiences API.
 
-**Phase 6 — launch.** Legal pages, a11y audit (WCAG 2.2 AA), Lighthouse, load test, backups,
-monitoring, incident plan.
+**Phase 6 — launch.** *Mostly done.* Privacy and methodology pages, security headers, WCAG 2.2
+AA audit, robots/sitemap. Operational runbook in `OPERATIONS.md` (launch checklist, backups,
+monitoring, incident response).
+
+The accessibility audit found real defects, not cosmetic ones:
+
+- **The light palette had never been contrast-checked.** `--wwe-ink-3` sat at 2.89:1 on tinted
+  backgrounds — every caption on the site. Dark passed because that is the theme it was designed
+  and reviewed in. Tokens were re-solved numerically rather than adjusted by eye.
+- **Hover states promoted the decorative coral to a text background**, giving white-on-coral at
+  3.38:1 on every small and medium button. Fixed with a dedicated `--wwe-accent-hover` that
+  darkens in light and brightens in dark.
+- **`color-scheme` was never declared**, so native selects and inputs kept light-mode chrome
+  under a dark theme.
+- **The nav overflowed at 320px**, failing WCAG 2.2 reflow.
+
+The CSP is the "no third-party scripts" promise made enforceable: Cloudflare Turnstile is the
+only external origin allowed anywhere, so an analytics snippet added later gets blocked rather
+than quietly shipped. `'unsafe-inline'` on `script-src` is a deliberate, documented trade — see
+the comment in `next.config.ts`.
+
+**Not done:** Lighthouse budgets in CI, and a load test. The site is static plus one write
+endpoint, so the load profile is thin; the honest gap is that neither has been measured.
 
 **Phase 7 — cold start.** The hardest unsolved problem: the survey is worthless below ~500
 responses and there is no data to attract them with. Plan the seeding push (HN, lobste.rs,

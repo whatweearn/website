@@ -22,9 +22,9 @@ const SIZES = {
  * keep the deeper accent, which they need for 4.5:1.
  */
 const VARIANTS = {
-  coral: "bg-accent text-on-accent shadow-sm hover:bg-coral hover:shadow-md hover:-translate-y-px",
+  coral: "bg-accent text-on-accent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
   coralLarge: "bg-coral text-on-accent shadow-sm hover:bg-accent hover:shadow-md hover:-translate-y-px",
-  ink: "bg-ink text-on-ink shadow-sm hover:bg-accent hover:text-on-accent hover:-translate-y-px",
+  ink: "bg-ink text-on-ink shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
   ghost: "bg-transparent text-ink border border-line-2 hover:bg-tint hover:border-ink-3",
 } as const;
 
