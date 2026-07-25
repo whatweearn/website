@@ -21,6 +21,13 @@ claims being true and being marketing.
 - [ ] Records of processing written for the subscriber list. Survey responses are
       anonymous and fall outside GDPR, which is exactly why the anonymity must hold.
 
+### GitHub Actions secrets — blocking for nightly figures
+
+- [ ] `DATABASE_URL` and `DATABASE_URL_DIRECT` set as repository secrets.
+- [ ] The subscriber credentials are **not** added. The aggregation has no
+      reason to reach that database, and withholding the credential is how that
+      stays true rather than being a matter of trust.
+
 ### Secrets — blocking
 
 Generate with `openssl rand -base64 32`. The app refuses to start the survey
@@ -251,7 +258,7 @@ as user-facing and say so on the site.
 
 | When | What |
 |---|---|
-| Nightly | `pnpm aggregate` — rebuilds figures and the dataset |
+| Nightly | GitHub Actions `aggregate.yml` at 03:20 UTC — rebuilds the figures, verifies the suppression invariants, and commits only if they changed. The commit is what redeploys the site: `stats.json` is bundled at build time, so recomputing without a rebuild changes nothing a visitor sees. |
 | Weekly | Check aggregation ran; check ECB rate freshness |
 | Fortnightly | `purgeUnconfirmed()` — drops addresses that never confirmed |
 | Monthly | `compactDay()` over recent days; dependency updates |

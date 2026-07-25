@@ -125,3 +125,15 @@ describe("buildMicrodata", () => {
     }
   });
 });
+
+describe("determinism", () => {
+  it("produces byte-identical output for the same data in any order", () => {
+    // The dataset is committed nightly. A file that reshuffles on every run
+    // would make the version history useless as a record of what was
+    // published when.
+    const sample = [...rows(6), ...rows(6, { country: "PL", currency: "PLN" })];
+    const forwards = buildMicrodata(sample, RATES).csv;
+    const backwards = buildMicrodata([...sample].reverse(), RATES).csv;
+    expect(forwards).toBe(backwards);
+  });
+});

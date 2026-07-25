@@ -1,0 +1,61 @@
+name: Nightly aggregation
+
+# The site reads src/data/stats.json, which Next bundles at build time — so
+# recomputing the figures on a server does nothing until the site is rebuilt.
+# Committing the output is what triggers that rebuild, and it has a second
+# benefit worth more than the convenience: every published figure lands in git
+# history, so anyone can audit exactly what was published on any given day.
+
+on:
+  schedule:
+    # 03:20 UTC. After the ECB publishes (around 16:00 CET the previous day),
+    # and off the hour, where every other scheduled job in the world contends.
+    - cron: "20 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: aggregate
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Rebuild published figures
+        env:
+          # Responses only. This job has no reason to reach the subscriber
+          # database, and not giving it the credential is how that stays true.
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ secrets.DATABASE_URL_DIRECT }}
+        run: pnpm aggregate
+
+      - name: Verify suppression rules still hold
+        # The published file is about to be committed and deployed. If the
+        # invariants fail — a median below the threshold, an identifiable
+        # histogram bucket — nothing should ship.
+        run: pnpm vitest run src/lib/stats.test.ts
+
+      - name: Commit if the figures changed
+        run: |
+          if git diff --quiet -- src/data/stats.json public/whatweearn-dataset.csv; then
+            echo "No change in published figures."
+            exit 0
+          fi
+          git config user.name "whatweearn bot"
+          git config user.email "noreply@whatweearn.eu"
+          git add src/data/stats.json public/whatweearn-dataset.csv
+          git commit -m "Nightly figures: $(date -u +%Y-%m-%d)"
+          git push
