@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     // Double opt-in. Sent immediately, which is also why the sender name is
     // recognised when the results blast arrives a year later.
     const link = `${SITE_URL}/api/subscribe/confirm?email=${encodeURIComponent(address)}&token=${tokenFor(address, "confirm")}`;
-    await sendEmail({
+    const sent = await sendEmail({
       to: address,
       subject: "Confirm your whatweearn notification",
       text: [
@@ -68,6 +68,16 @@ export async function POST(request: Request) {
         "different database with no link back to them.",
       ].join("\n"),
     });
+
+    if (!sent.ok) {
+      // Telling somebody to check an inbox nothing was sent to is worse than
+      // an error: they wait, nothing arrives, and the address expires
+      // unconfirmed. The pending row stays, so a retry simply sends again.
+      return NextResponse.json(
+        { error: "We could not send the confirmation email just now. Please try again shortly." },
+        { status: 502 },
+      );
+    }
   }
 
   return NextResponse.json({ ok: true });

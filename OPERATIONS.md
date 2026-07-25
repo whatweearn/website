@@ -36,16 +36,22 @@ claims being true and being marketing.
 Generate with `openssl rand -base64 32`. The app refuses to start the survey
 without the first two rather than falling back to development values.
 
-- [ ] `FORM_TOKEN_SECRET`
-- [ ] `IDENTITY_SECRET`
-- [ ] `SUBSCRIBER_TOKEN_SECRET`
+- [x] `FORM_TOKEN_SECRET` — generated 2026-07-25
+- [x] `IDENTITY_SECRET` — generated 2026-07-25
+- [x] `SUBSCRIBER_TOKEN_SECRET` — generated 2026-07-25
+
+  These live only in `.env.local`. **Set them again in the hosting environment** —
+  Vercel does not read that file. Rotating `IDENTITY_SECRET` costs one day of
+  duplicate detection; rotating `SUBSCRIBER_TOKEN_SECRET` invalidates every
+  unsubscribe link already in someone's inbox, so treat that one as permanent.
 - [x] `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — issued 2026-07-25.
       **Rotate the secret before launch:** it was pasted into a chat transcript, which is a
       copy nobody controls. Rotation in the Cloudflare dashboard takes seconds.
       Add `localhost` to the key's allowed hostnames if you want the widget to solve during
       local development; without it the survey correctly shows the "could not check your
       browser" path, which is worth seeing once anyway.
-- [ ] `RESEND_API_KEY`, `EMAIL_FROM`
+- [ ] `RESEND_API_KEY`, `EMAIL_FROM` — **the last outstanding secret.** Until it is set,
+      `/api/subscribe` correctly returns 502 rather than claiming an email was sent.
 - [ ] `NEXT_PUBLIC_SITE_URL=https://whatweearn.eu`
 
 ### Databases — blocking
