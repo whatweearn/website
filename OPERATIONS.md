@@ -10,6 +10,14 @@ Architecture and product decisions live in `CLAUDE.md`.
 Nothing here is optional. Several items are the difference between the site's
 claims being true and being marketing.
 
+**Where this stands — 2026-07-26.** The site is deployed and serving at
+`whatweearn.eu`, the repository is public, and the nightly aggregation runs from
+GitHub Actions. It is collecting responses and has none: nothing has published,
+so the site shows empty states and seeding copy. What remains open below is
+mostly legal follow-through and email deliverability — none of it blocks a
+response being submitted, and the email items block only the first broadcast,
+which is a year away.
+
 ### Legal — blocking
 
 - [x] Controller configured — **Codeetry SRL**, Mont-Saint-Guibert, Belgium, enterprise
@@ -26,10 +34,13 @@ claims being true and being marketing.
 
 ### GitHub Actions secrets — blocking for nightly figures
 
-- [ ] `DATABASE_URL` and `DATABASE_URL_DIRECT` set as repository secrets.
-- [ ] The subscriber credentials are **not** added. The aggregation has no
+- [x] `DATABASE_URL` and `DATABASE_URL_DIRECT` set as repository secrets — set
+      2026-07-26, after the rotation left CI a day behind (§1b-bis).
+- [x] The subscriber credentials are **not** added. The aggregation has no
       reason to reach that database, and withholding the credential is how that
-      stays true rather than being a matter of trust.
+      stays true rather than being a matter of trust. Verified 2026-07-26:
+      `gh secret list` returns those two names and nothing else, which is the
+      check to re-run — the property is that the list stays short.
 
 ### Secrets — blocking
 
@@ -62,12 +73,14 @@ without the first two rather than falling back to development values.
 
 ### Databases — blocking
 
-- [ ] `DATABASE_URL` and `SUBSCRIBER_DATABASE_URL` point at **two different
+- [x] `DATABASE_URL` and `SUBSCRIBER_DATABASE_URL` point at **two different
       instances** with **different credentials**. Same instance, different schema is
       not sufficient: the separation is what makes "never linked to your answers"
       true (`CLAUDE.md` §4). See §1a for what this means on Neon.
-- [ ] `pnpm verify:separation` passes.
-- [ ] `pnpm db:migrate` and `pnpm db:migrate:subscribers` both run.
+- [x] `pnpm verify:separation` passes — last run 2026-07-26, after the rotation.
+      Not a one-time item: run it again after anything touches a connection string.
+- [x] `pnpm db:migrate` and `pnpm db:migrate:subscribers` both run — evidenced by
+      the end-to-end submission below and by the confirmed subscriber row in §1b-ter.
 - [x] A throwaway submission verified end to end, then deleted — done 2026-07-25 against
       Neon. The live driver had never run outside PGlite; it works. The stored row held
       only `submitted_on` (a date), the one-way handle, and the answers: no address, no
@@ -178,11 +191,20 @@ pnpm aggregate                # should report 1 response, 0 published
 - [ ] A confirmation email received and its link followed, in a real client.
 - [ ] One-click unsubscribe verified from a real client, not just by URL.
 
-### Before flipping the repository public
+### Before flipping the repository public — done 2026-07-26
 
-- [ ] Privacy and methodology pages live and accurate.
-- [ ] No secrets in history (`git log --all -p | grep -iE 'postgres://|re_[A-Za-z0-9]{24}'`).
-- [ ] Licence confirmed: MIT for code, CC BY 4.0 for data.
+The repository is public at `github.com/whatweearn/website`.
+
+- [x] Privacy and methodology pages live and accurate. `/privacy`, `/methodology`
+      and `/imprint` all serve, each naming the controller rather than falling back
+      to the "not configured" state.
+- [x] No secrets in history. Every hit from
+      `git log --all -p | grep -iE 'postgres://|re_[A-Za-z0-9]{24}'` is a test
+      fixture with an invented password. One of them, in `connectionString.test.ts`,
+      was built from the shape of the real responses host; a hostname is not a
+      credential and that password was rotated anyway, but prefer a wholly invented
+      host in new fixtures — a plausible one invites exactly this re-check.
+- [x] Licence confirmed: MIT for code, CC BY 4.0 for data.
 
 ---
 
