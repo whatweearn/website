@@ -512,6 +512,70 @@ test.describe("when the browser check cannot run", () => {
     // Their answers are still on screen; nothing was lost.
     await expect(page.getByText("Question 9 of 9")).toBeVisible();
   });
+
+  /**
+   * The widget must mount once and stay mounted.
+   *
+   * It did not. `onToken` and `onFailure` were inline arrows in the wizard, so
+   * they changed identity on every render, and they sat in the Turnstile
+   * effect's dependency array — which meant every keystroke and every answer
+   * removed the widget and rendered a new one. Production measured nineteen
+   * render/remove pairs from six interactions on one screen.
+   *
+   * That is not a tidiness problem. Each remount asks Cloudflare for a fresh
+   * challenge, so one person filling in nine screens looked like dozens of
+   * challenge requests against a single sitekey — the shape of the abuse
+   * Turnstile exists to throttle. It also discarded any token already solved,
+   * wiped an interaction-only checkbox the moment the next answer was given,
+   * and restarted the give-up timer so the failure notice fired at random.
+   * The visible symptom is a site that appears to have Cloudflare blocked.
+   */
+  test("mounts the widget once, however many answers are given", async ({ page }) => {
+    // Every `turnstile.render()` mints a widget with a fresh `cf-chl-widget-*`
+    // id, so counting the distinct ids that have ever existed counts mounts —
+    // and unlike patching the Turnstile object, it survives however api.js
+    // chooses to define itself.
+    await page.addInitScript(() => {
+      const ids: string[] = [];
+      (window as unknown as { __widgetIds: string[] }).__widgetIds = ids;
+      const seen = new Set<string>();
+      const scan = () => {
+        for (const field of document.querySelectorAll<HTMLInputElement>(
+          'input[name="cf-turnstile-response"]',
+        )) {
+          if (field.id && !seen.has(field.id)) {
+            seen.add(field.id);
+            ids.push(field.id);
+          }
+        }
+      };
+      new MutationObserver(scan).observe(document, { childList: true, subtree: true });
+      scan();
+    });
+
+    const widgetIds = () =>
+      page.evaluate(() => (window as unknown as { __widgetIds: string[] }).__widgetIds);
+
+    await page.goto("/survey");
+    await expect.poll(async () => (await widgetIds()).length).toBeGreaterThan(0);
+
+    // Six answers on the first screen alone, then the rest of the funnel.
+    for (const code of ["BE", "DE", "ES", "FR", "IT", "NL"]) {
+      await page.getByLabel("Country").selectOption(code);
+    }
+    await next(page);
+    await next(page);
+    await page.getByText("Permanent employee").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+    await page.getByRole("spinbutton").first().fill("78000");
+    await next(page);
+
+    // One id, not one per answer given.
+    expect(await widgetIds()).toHaveLength(1);
+  });
 });
 
 test.describe("the promise matches reality", () => {
