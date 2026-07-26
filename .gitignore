@@ -51,6 +51,8 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 
+/outreach
+
 # public/whatweearn-dataset.csv is deliberately NOT ignored: it is the
 # published open dataset, and versioning it gives an audit trail of exactly
 # what was released on any given day.
