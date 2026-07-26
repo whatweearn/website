@@ -34,7 +34,15 @@ function loadScript(): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Turnstile script failed to load"));
+    script.onerror = () => {
+      // Drop the memoised promise and the dead tag, or every later retry
+      // re-awaits this same rejection and fails instantly — which made the
+      // "Try the check again" button a no-op for exactly the people who
+      // needed it.
+      scriptPromise = undefined;
+      script.remove();
+      reject(new Error("Turnstile script failed to load"));
+    };
     document.head.appendChild(script);
   });
   return scriptPromise;
@@ -73,12 +81,31 @@ export function Turnstile({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<string>(undefined);
 
+  // The callbacks are held in refs and deliberately kept out of the effect's
+  // dependencies. Callers pass inline arrows — a new identity on every render —
+  // and with those in the dependency array the effect re-ran on every keystroke
+  // of the survey, removing and re-rendering the widget each time. Measured on
+  // production: nineteen render/remove pairs from six interactions on a single
+  // screen. That burns a fresh challenge per keystroke against one sitekey,
+  // which is the shape of the abuse Cloudflare throttles, so the widget starts
+  // failing for that visitor and the site looks like it is being blocked. It
+  // also wiped any checkbox an interaction-only challenge had just shown, and
+  // restarted the give-up timer, so the failure notice fired at random.
+  //
+  // The widget must mount once per (siteKey, attempt) and stay mounted.
+  const onTokenRef = useRef(onToken);
+  const onFailureRef = useRef(onFailure);
+  useEffect(() => {
+    onTokenRef.current = onToken;
+    onFailureRef.current = onFailure;
+  });
+
   useEffect(() => {
     let cancelled = false;
     let solved = false;
 
     const giveUp = setTimeout(() => {
-      if (!cancelled && !solved) onFailure?.();
+      if (!cancelled && !solved) onFailureRef.current?.();
     }, GIVE_UP_MS);
 
     loadScript()
@@ -91,16 +118,16 @@ export function Turnstile({
           callback: (token) => {
             solved = true;
             clearTimeout(giveUp);
-            onToken(token);
+            onTokenRef.current(token);
           },
           "error-callback": () => {
             clearTimeout(giveUp);
-            onToken(undefined);
-            onFailure?.();
+            onTokenRef.current(undefined);
+            onFailureRef.current?.();
           },
           "expired-callback": () => {
             solved = false;
-            onToken(undefined);
+            onTokenRef.current(undefined);
           },
         });
       })
@@ -110,8 +137,8 @@ export function Turnstile({
         // verified, but we do owe them an explanation.
         if (!cancelled) {
           clearTimeout(giveUp);
-          onToken(undefined);
-          onFailure?.();
+          onTokenRef.current(undefined);
+          onFailureRef.current?.();
         }
       });
 
@@ -119,11 +146,17 @@ export function Turnstile({
       cancelled = true;
       clearTimeout(giveUp);
       if (widgetRef.current && window.turnstile) {
-        window.turnstile.remove(widgetRef.current);
+        // Removing an id Turnstile has already discarded throws; a throw in a
+        // cleanup would take the survey down with it.
+        try {
+          window.turnstile.remove(widgetRef.current);
+        } catch {
+          // Already gone. Nothing to do.
+        }
         widgetRef.current = undefined;
       }
     };
-  }, [siteKey, onToken, onFailure, attempt]);
+  }, [siteKey, attempt]);
 
   return <div ref={containerRef} className="flex justify-center" />;
 }

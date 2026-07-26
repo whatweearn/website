@@ -74,8 +74,17 @@ export async function POST(request: Request) {
   // 4. Turnstile. Fails closed in production, including when unreachable.
   const turnstile = await verifyTurnstile(turnstileToken, address);
   if (!turnstile.ok) {
+    // "Try again" is only honest advice when trying again might work. A
+    // missing token means the browser check never ran — usually an extension
+    // or a network filter blocking challenges.cloudflare.com — and resubmitting
+    // the same form will fail identically. Say what would actually change it.
     return NextResponse.json(
-      { error: "We could not confirm this submission came from a browser. Please try again." },
+      {
+        error:
+          turnstile.reason === "missing_token"
+            ? "Your browser never completed the Cloudflare check, so we cannot accept this yet. It is almost always an extension or network filter blocking challenges.cloudflare.com. Your answers are saved on this device — allow that domain, reload, and they will still be here."
+            : "We could not confirm this submission came from a browser. Please try again.",
+      },
       { status: 403 },
     );
   }
