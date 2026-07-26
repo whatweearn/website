@@ -359,6 +359,18 @@ The accessibility audit found real defects, not cosmetic ones:
 - **`color-scheme` was never declared**, so native selects and inputs kept light-mode chrome
   under a dark theme.
 - **The nav overflowed at 320px**, failing WCAG 2.2 reflow.
+- **Large coral buttons were failing 4.5:1 the whole time, and the suite could not
+  see it.** White on `--wwe-coral` is 3.38:1, which only passes under WCAG's large-text
+  rule, and that rule needs 18.66px **bold** or 24px at any weight. `text-lg` is 19.3px
+  and the shared button base set `font-semibold`, so it was never large text. It stayed
+  hidden because the hero button sits on `hero-glow`: axe cannot resolve a gradient to one
+  background colour, so it files the result as **incomplete** rather than a violation, and
+  every scan here asserts only `violations`. Putting the same button on a flat surface
+  failed instantly. Weight now lives on `SIZES` in `ui.tsx`, not the base — two competing
+  `font-*` weight utilities on one element resolve by emission order, not class order, so
+  a variant adding `font-bold` over a `font-semibold` base silently loses. **Treat axe
+  `incomplete` as unreviewed, not as passing**, and re-check any token you have only ever
+  seen against a gradient.
 
 The CSP is the "no third-party scripts" promise made enforceable: Cloudflare Turnstile is the
 only external origin allowed anywhere, so an analytics snippet added later gets blocked rather
@@ -381,6 +393,23 @@ Two things follow for whoever picks this up:
   hero and payoff text automatically, so nothing needs flipping by hand — but it also means the
   first publication changes the page's claims. Re-read §1 against the live page on the day that
   happens rather than assuming the switch got every claim right.
+- **The page now argues value first and privacy second, 2026-07-26.** It used to run
+  hero → what we never ask → what you get, which put two screens of things we promise not
+  to do in front of any reason to care. Privacy is what makes this safe to answer; it was
+  never why anyone would want to. `Stakes` in `sections.tsx` carries the argument (you
+  find out years late, the gap compounds, the other side already buys this data) and sits
+  above `SurveyPreview`. The seeding-copy gate still applies to every claim in it: nothing
+  here may promise a payoff that `hasPublishedFigures` says does not exist yet.
+- **Sharing is a mechanism, not a courtesy button.** `Share` in `components/Share.tsx`
+  appears on the confirmation screen (dominant, `prominent`), the landing page and the
+  explorer. The message is pre-written, visible rather than hidden behind the button, and
+  carries the *gap* — "Germany needs 47 more" makes the reader's two minutes consequential
+  where "I answered a survey" asks for a favour. Message text lives in `lib/share.ts` with
+  its own tests, because it is the only copy on the site that goes out under somebody
+  else's name: third person wherever the reader may not have answered, no em dashes, and
+  short enough for X once the URL takes its 23 characters. Every channel is a plain
+  outbound link to a public intent URL — **never add a share SDK**, the CSP would block it
+  and an e2e test asserts no third-party script reaches that page.
 - **Per-country funnel data from the push is the evidence the translation question waits on**
   (§11). It only exists if the push is instrumented enough to tell where people arrived from,
   which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.

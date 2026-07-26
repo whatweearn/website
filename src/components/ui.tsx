@@ -21,20 +21,40 @@ export const SHELL =
 export const SELECT_CONTROL = cx(SHELL, "appearance-none py-3 pr-10 pl-4 text-base text-ink");
 
 const BUTTON_BASE =
-  "inline-flex items-center justify-center gap-2 rounded-full font-display font-semibold " +
+  "inline-flex items-center justify-center gap-2 rounded-full font-display " +
   "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,transform,border-color,color] " +
   "duration-200 group";
 
+/**
+ * Weight lives here rather than in {@link BUTTON_BASE} because it has to be
+ * settable per size, and two competing `font-*` weight utilities on one
+ * element do not resolve by class order — they resolve by whichever rule
+ * Tailwind emitted last, which is not something a caller can see or control.
+ * A `font-bold` variant added on top of a `font-semibold` base silently lost.
+ */
 const SIZES = {
-  sm: "px-[1.2rem] py-[0.68rem] text-xs",
-  base: "px-[1.65rem] py-4 text-base",
-  lg: "px-[2.1rem] py-[1.15rem] text-lg",
+  sm: "px-[1.2rem] py-[0.68rem] text-xs font-semibold",
+  base: "px-[1.65rem] py-4 text-base font-semibold",
+  lg: "px-[2.1rem] py-[1.15rem] text-lg font-bold",
 } as const;
 
 /**
  * Coral is reserved for the two conversion moments (hero and dock). Large
  * buttons take the brighter coral because they clear AA at 3:1; small ones
  * keep the deeper accent, which they need for 4.5:1.
+ *
+ * The `font-bold` on `SIZES.lg` is what makes that true, and it is load-bearing
+ * rather than styling. White on `--wwe-coral` is 3.38:1, which is only enough
+ * under WCAG's large-text rule, and that rule needs 18.66px *bold* or 24px at
+ * any weight. `text-lg` resolves to 19.3px, so at the semibold 600 this used to
+ * carry it was not large text at all and the real requirement was 4.5:1 — a
+ * failure since the palette was solved.
+ *
+ * It went unseen because the hero button sits on `hero-glow`, a gradient axe
+ * cannot resolve to a single background colour, so it was reported as
+ * "incomplete" rather than a violation and the suite only asserts violations.
+ * The share card put the same button on a flat surface and it failed at once.
+ * Do not drop the large weight below 700 without re-solving the token.
  */
 const VARIANTS = {
   coral: "bg-accent text-on-accent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",

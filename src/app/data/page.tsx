@@ -4,9 +4,11 @@ import Link from "next/link";
 import { CountryProgress } from "@/components/CountryProgress";
 import { DayRates } from "@/components/DayRates";
 import { Explorer } from "@/components/Explorer";
+import { Share } from "@/components/Share";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { Container } from "@/components/ui";
 import { count } from "@/lib/format";
+import { shareMessageFor } from "@/lib/share";
 import {
   countriesNearingPublication,
   dayRatesByCountry,
@@ -25,6 +27,7 @@ export const metadata: Metadata = {
 export default async function DataPage() {
   const stats = await getSiteStats();
   const published = hasPublishedFigures(stats);
+  const nearing = countriesNearingPublication(stats);
 
   return (
     <main className="py-[clamp(2rem,5vw,4rem)]">
@@ -54,7 +57,22 @@ export default async function DataPage() {
 
         <DayRates rows={dayRatesByCountry(stats)} />
 
-        <CountryProgress countries={countriesNearingPublication(stats)} />
+        <CountryProgress countries={nearing} />
+
+        {/* Placed directly under the progress bars rather than at the foot of
+            the page. Somebody who has just read "Germany, 9 of 60" is holding
+            the exact fact that makes forwarding this worth doing, and it is
+            gone by the time they reach the CSV. */}
+        <Share
+          className="mt-10"
+          message={shareMessageFor(nearing[0])}
+          headline={published ? "Make them sharper." : "This is how the bars move."}
+          blurb={
+            published
+              ? "Every further answer narrows the figures above. Nothing here is advertised anywhere, so the next engineer arrives because somebody sent it to them."
+              : "Nothing here is advertised anywhere and there is no budget behind it. Those bars fill because people send this to other engineers, which is a thirty-second job with a much better return than most."
+          }
+        />
 
         <section className="mt-16 border-t border-line pt-8">
           <h2 className="text-lg">Take the whole thing</h2>

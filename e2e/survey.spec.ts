@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 /**
@@ -455,16 +456,62 @@ test.describe("the confirmation screen", () => {
     await expect(page.getByText(/never email you about your own numbers/)).toBeVisible();
   });
 
-  test("offers a share carrying the gap, not an achievement", async ({ page, context }) => {
+  // One submission, several assertions. Splitting these into a test each is
+  // tidier to read and pushes the block past the five-per-hour rate limit,
+  // which is a production rule worth more than the tidiness.
+  test("makes sharing the obvious next move", async ({ page, context }) => {
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await submitFrom(page, "DE");
     await expect(page.getByText(/engineer from Germany/)).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("button", { name: /Ask someone else/ }).click();
+    // Shown, not hidden behind the button. People post what they can read; a
+    // bare copy button asks somebody to publish text under their own name
+    // sight unseen, which is most of why share buttons go unclicked.
+    const share = page.getByRole("region", { name: /decides whether Germany|pass it on/i });
+    await expect(share.getByText(/Germany needs \d+ more before its median publishes/)).toBeVisible();
+
+    // Every channel one click away, and all of them plain links. A share SDK
+    // would be both a CSP violation and exactly the tracking this site
+    // promises it does not load.
+    for (const name of [
+      /Share on X/,
+      /Share on LinkedIn/,
+      /Post to Reddit/,
+      /Submit to Hacker News/,
+      /Send on WhatsApp/,
+    ]) {
+      await expect(share.getByRole("link", { name })).toBeVisible();
+    }
+    const scripts = await page.evaluate(() =>
+      [...document.querySelectorAll("script[src]")].map((s) => (s as HTMLScriptElement).src),
+    );
+    const origin = new URL(page.url()).origin;
+    const external = scripts
+      .filter((src) => !src.startsWith(origin))
+      .filter((src) => !src.includes("challenges.cloudflare.com"));
+    expect(external).toEqual([]);
+
+    await share.getByRole("button", { name: /Copy the message/ }).click();
     const copied = await page.evaluate(() => navigator.clipboard.readText());
     // "Germany needs N more" makes the reader's action consequential; "I did a
-    // survey" asks for a favour.
+    // survey" asks for a favour. The link has to travel with it either way.
     expect(copied).toMatch(/Germany needs \d+ more before its median publishes/);
+    expect(copied).toMatch(/https?:\/\//);
+
+    // Scanned here rather than in a11y.spec.ts, which would have to complete a
+    // tenth submission to reach this screen and push the suite over the
+    // five-per-hour rate limit. This screen had never been checked, and the
+    // last audit found the light palette failing contrast on tokens nobody had
+    // measured — so an unscanned screen is not a safe assumption here.
+    for (const theme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme: theme });
+      await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), theme);
+      await page.addStyleTag({ content: "*,*::before,*::after{transition:none!important}" });
+      const results = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+      expect(results.violations, `${theme} theme`).toEqual([]);
+    }
   });
 
   test("keeps the deletion caveat, but not as the headline", async ({ page }) => {
@@ -473,6 +520,17 @@ test.describe("the confirmation screen", () => {
     expect(heading).not.toMatch(/cannot/i);
     // Still said — just not the first thing at the moment of most goodwill.
     await expect(page.getByText(/cannot take one particular response back out/)).toBeVisible();
+    // And said once. The warning shown while the decision can still be changed
+    // belongs to the questions, so it goes with them; leaving it on the page
+    // shell stacked it directly above the confirmation's own version.
+    await expect(page.getByText(/we cannot delete one particular response/)).toHaveCount(0);
+  });
+
+  test("warns before submitting, where the warning can still change a decision", async ({
+    page,
+  }) => {
+    await page.goto("/survey");
+    await expect(page.getByText(/we cannot delete one particular response/)).toBeVisible();
   });
 });
 
@@ -605,7 +663,7 @@ test.describe("the promise matches reality", () => {
 
   test("makes being early the offer instead", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByText(/the early ones count for more/)).toBeVisible();
+    await expect(page.getByText(/the early ones count for most/)).toBeVisible();
     await expect(
       page.getByRole("heading", { name: /It opens for everyone, the moment there is enough/ }),
     ).toBeVisible();
