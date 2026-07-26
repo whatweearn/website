@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "
 import {
   COMPANY_SIZES,
   COMPANY_STAGES,
-  CONTRACT_TYPES,
   COUNTRIES,
   CURRENCIES,
   DISCIPLINES,
@@ -16,6 +15,7 @@ import {
   SALARY_PERIODS,
   WORK_SETUPS,
   citiesFor,
+  contractTypesFor,
   type CountryCode,
 } from "@/lib/survey/options";
 import { checkSalary } from "@/lib/survey/plausibility";
@@ -262,7 +262,7 @@ export function SurveyWizard({
             label="Contract type"
             value={draft.contractType as string}
             onChange={(v) => set("contractType", v)}
-            options={CONTRACT_TYPES}
+            options={contractTypesFor(country)}
           />
           <Field label="Hours" htmlFor="ftePercent" hint="Leave at 100 for full time.">
             <NumberField

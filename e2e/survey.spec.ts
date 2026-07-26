@@ -29,6 +29,69 @@ async function answerRequired(page: Page) {
   await page.getByRole("spinbutton").first().fill("78000");
 }
 
+test.describe("contract type in local terms", () => {
+  /**
+   * The categories are generic; the boundary that decides whether a response
+   * reaches a headline median is drawn by local law under local names. Someone
+   * on an umowa zlecenie is not an employee, but "Fixed-term employee" reads
+   * like a fair description of it — and choosing that puts a non-employee gross
+   * figure into the employees-only median, where nothing downstream can catch
+   * it. Unit tests cover the mapping; this covers the wiring, which is the part
+   * that silently breaks.
+   */
+  test("names the contract the way the respondent's own payslip does", async ({ page }) => {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("PL");
+    await next(page);
+    await next(page);
+
+    await expect(page.getByText("Umowa o pracę na czas nieokreślony")).toBeVisible();
+    await expect(page.getByText("Kontrakt B2B (JDG)")).toBeVisible();
+  });
+
+  test("follows the country when it is changed", async ({ page }) => {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("PL");
+    await next(page);
+    await next(page);
+    await expect(page.getByText("Kontrakt B2B (JDG)")).toBeVisible();
+
+    await page.getByRole("button", { name: /^Back/ }).click();
+    await page.getByRole("button", { name: /^Back/ }).click();
+    await page.getByLabel("Country").selectOption("DE");
+    await next(page);
+    await next(page);
+
+    await expect(page.getByText("Über eine eigene GmbH oder UG")).toBeVisible();
+    await expect(page.getByText("Kontrakt B2B (JDG)")).toHaveCount(0);
+  });
+
+  test("falls back to the generic wording for a country with no terms recorded", async ({
+    page,
+  }) => {
+    // Switzerland has three working languages; picking one would mislead the
+    // speakers of the other two, so it stays generic by design.
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("CH");
+    await next(page);
+    await next(page);
+
+    await expect(page.getByText("Company-to-company, through your own business")).toBeVisible();
+  });
+
+  test("stores the same answer whatever language it was read in", async ({ page }) => {
+    // The label is what the funnel selects on, and it must not move: a
+    // localised *value* would fragment every cut in the site by language.
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("PL");
+    await next(page);
+    await next(page);
+
+    await expect(page.getByText("Permanent employee")).toBeVisible();
+    await expect(page.getByText("B2B", { exact: true })).toBeVisible();
+  });
+});
+
 test.describe("survey funnel", () => {
   test("walks all nine questions and submits, accepting the default currency", async ({
     page,

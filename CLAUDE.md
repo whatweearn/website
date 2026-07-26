@@ -404,7 +404,31 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
 
 ## 11. Open questions
 
-- Language: English-only v1? A pan-European site in one language is a real limitation.
+- Language: **English-only in v1, decided 2026-07-26** — but the contract-type options are named
+  in local legal terms once the country is known (`CONTRACT_LOCAL_TERMS` in
+  `src/lib/survey/options.ts`). That is a data-quality fix, not a step towards translation. The
+  four categories are generic; the boundary that decides whether a response reaches a headline
+  median — employee versus not — is drawn by *local* law under local names. Someone on a Polish
+  umowa zlecenie or an Italian co.co.co. is not an employee, yet "Fixed-term employee" reads
+  like a fair description of their situation, and choosing it puts a non-employee gross figure
+  into the employees-only median where nothing downstream can detect it. Values are never
+  localised, so the dataset stays comparable across countries; `options.test.ts` enforces that
+  and the e2e covers the wiring.
+
+  Full translation was rejected *for now*, not on principle, for three reasons: the seeding copy
+  is temporary by design (`hasPublishedFigures` swaps it once anything publishes, so translating
+  now means translating it twice); every claim in §1 would become N copies that must stay in
+  sync with the code, and a stale translation is a false claim in a language we cannot audit;
+  and with zero responses the bottleneck is reach, not comprehension. Revisit at first
+  publication, using per-country funnel data from the seeding push as the evidence. If the
+  answer becomes yes, translate the nine survey screens first — bounded choices make them
+  ~200 short stable strings — and **never** machine-translate `/privacy` or `/imprint`, where
+  multiple versions raise which-version-governs against a named controller.
+
+  Outstanding: the local terms are researched, not authoritative. They need a native speaker's
+  review per country before launch — a wrong contract form here corrupts the headline figure
+  silently. Switzerland is deliberately absent (three working languages; picking one misleads
+  the other two), as are BG, EE, HR, HU, LT, LV, RS, SI, SK and UA.
 - Do we publish year-over-year, and how do we handle the same person answering twice?
 - Verification: an unverifiable survey is gameable. Optional payslip verification would give a
   "verified" subset — but it collides hard with anonymity. Probably v2, probably no.
