@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { AutoThemeIcon, MoonIcon, SunIcon } from "./icons";
+
 type Choice = "light" | "dark" | "system";
 
 const STORAGE_KEY = "wwe-theme";
@@ -64,15 +66,22 @@ const NEXT: Record<Choice, Choice> = {
   light: "system",
 };
 
-const GLYPH: Record<Choice, string> = {
-  system: "◐",
-  dark: "☾",
-  light: "☀",
+/**
+ * Drawn rather than typed. These were `◐ ☾ ☀`, and `☀` (U+2600) carries an
+ * emoji presentation on several platforms — a colour glyph in a nav built out
+ * of hairlines, on exactly the control whose job is to look neutral in both
+ * themes. An SVG renders the same everywhere and takes `currentColor`.
+ */
+const GLYPH: Record<Choice, typeof SunIcon> = {
+  system: AutoThemeIcon,
+  dark: MoonIcon,
+  light: SunIcon,
 };
 
 export function ThemeToggle() {
   const choice = useSyncExternalStore(subscribe, read, readOnServer);
   const label = choice === "system" ? "Theme: follows your system" : `Theme: ${choice}`;
+  const Glyph = GLYPH[choice];
 
   return (
     <button
@@ -82,9 +91,7 @@ export function ThemeToggle() {
       title={label}
       className="grid size-9 place-items-center rounded-full border border-line text-ink-2 transition-colors hover:border-line-2 hover:text-ink"
     >
-      <span aria-hidden="true" className="text-[15px] leading-none">
-        {GLYPH[choice]}
-      </span>
+      <Glyph />
     </button>
   );
 }

@@ -8,6 +8,7 @@ import {
   Payoff,
   Proof,
   SiteFooter,
+  Stakes,
   SurveyPreview,
 } from "@/components/sections";
 import { Container } from "@/components/ui";
@@ -69,8 +70,17 @@ export default async function Home() {
           </Container>
         </section>
 
-        <SurveyPreview />
+        {/*
+          Order is the argument. It used to run hero → what we never ask →
+          what you get, which put two screens of things we promise not to do
+          in front of any reason to care. Privacy is what makes this safe to
+          answer, never why anyone would want to, so the case for spending the
+          two minutes now comes first and the privacy section lands as
+          reassurance for somebody already interested.
+        */}
+        <Stakes />
         <Payoff published={published} />
+        <SurveyPreview />
         <CountryTable stats={stats} />
         <Closing />
       </main>

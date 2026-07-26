@@ -610,6 +610,17 @@ export function SurveyWizard({
           )}
         </div>
       )}
+
+      {/* Lives here rather than on the page around it, because the page also
+          renders the confirmation screen — which carries its own version of
+          this, and the two stacked one above the other read as a page that had
+          not been proofread. This is the copy that matters: it is the one shown
+          while the decision can still be changed. The confirmation's is a
+          reminder afterwards. */}
+      <p className="mt-12 border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
+        Nothing here identifies you. Because of that, we cannot delete one particular response
+        later — we would have no way to tell which one is yours.
+      </p>
     </div>
   );
 }

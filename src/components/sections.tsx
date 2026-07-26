@@ -1,10 +1,13 @@
 import { count } from "@/lib/format";
+import { INVITE_MESSAGE } from "@/lib/share";
 import { type SiteStats, publishableCountries } from "@/lib/stats";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "@/lib/thresholds";
 
 import Link from "next/link";
 
+import { CheckIcon, CrossIcon, FileIcon, FiltersIcon, GlobeIcon } from "./icons";
 import { Reveal } from "./Reveal";
+import { Share } from "./Share";
 import { Button, Container, Pill, SectionHead, TrustLine } from "./ui";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -29,6 +32,12 @@ export function Nav() {
         </a>
         <nav className="ml-auto flex min-w-0 items-center gap-3 text-xs min-[400px]:gap-6">
           <a
+            href="#why"
+            className="hidden text-ink-2 no-underline transition-colors hover:text-ink min-[900px]:inline"
+          >
+            Why bother
+          </a>
+          <a
             href="#survey"
             className="hidden text-ink-2 no-underline transition-colors hover:text-ink min-[760px]:inline"
           >
@@ -40,7 +49,6 @@ export function Nav() {
           >
             The data
           </Link>
-          <ThemeToggle />
           <Button href="/survey" variant="ink" size="sm">
             {/* WCAG 2.2 reflow: at 320px the full label pushes the nav past
                 the viewport. Same destination, fewer words. */}
@@ -67,17 +75,24 @@ export function Hero({ published }: { published: boolean }) {
       <h1 className="max-w-[14ch] text-3xl leading-[1.02] tracking-[-0.038em]">
         Know what you&rsquo;re <em className="not-italic text-coral">actually</em> worth.
       </h1>
-      <p className="max-w-[42ch] text-lg leading-snug text-ink-2">
+      {/* The lead is the asymmetry, not the method. Privacy is why this is safe
+          to answer; it was never why anyone would want to. That argument moved
+          down to the trust line and the survey preview, where it reassures
+          somebody already interested rather than opening to a stranger with a
+          list of things we promise not to do. */}
+      <p className="max-w-[44ch] text-lg leading-snug text-ink-2">
         {published ? (
           <>
-            A salary survey for software engineers in Europe. Nine questions, about two
-            minutes, and the whole dataset opens the moment you&rsquo;re done.
+            The company across the table knows the market rate for your job. You are
+            guessing at it. Nine questions, about two minutes, and the whole dataset opens
+            the moment you&rsquo;re done.
           </>
         ) : (
           <>
-            A salary survey for software engineers in Europe. Nine questions, about two
-            minutes. Nothing is published yet — a country needs {COUNTRY_PUBLISH_MIN} answers
-            before its median means anything, so the early ones count for more.
+            The company across the table knows the market rate for your job. You are
+            guessing at it. Nine questions, about two minutes. Nothing is published yet — a
+            country needs {COUNTRY_PUBLISH_MIN} answers before its median means anything, so
+            the early ones count for most.
           </>
         )}
       </p>
@@ -89,8 +104,74 @@ export function Hero({ published }: { published: boolean }) {
           See the data first
         </Button>
       </div>
-      <TrustLine items={["No account", "Email optional, never linked", "No employer names"]} />
+      <TrustLine items={["About two minutes", "Anonymous", "No account, no employer names"]} />
     </Container>
+  );
+}
+
+/* --------------------------------------------------------------- stakes -- */
+
+const STAKES = [
+  {
+    title: "Most engineers find out years late.",
+    body: "The offer at the next company is the first honest signal a lot of people ever get about their own market rate, and by then the gap has been running for three or four years. Nobody sends you a letter when you fall behind.",
+  },
+  {
+    title: "It is never just the salary.",
+    body: "Starting a few thousand under does not stay a few thousand. Every raise is a percentage of it, every bonus is a fraction of it, and the next employer asks what you make now. A small gap set early keeps paying out for the rest of a career.",
+  },
+  {
+    title: "The other side is not guessing.",
+    body: "Compensation teams buy benchmark data. Recruiters have placed forty people in your role this year and know exactly where you sit. That data exists and it is priced for employers. It is simply not sold to you.",
+  },
+];
+
+/**
+ * The argument for spending the two minutes.
+ *
+ * Everything else on this page describes what the site *is*. This is the only
+ * part that says why answering is worth anything to the person reading, which
+ * is the actual reason somebody starts a survey. It sits above the privacy
+ * section on purpose.
+ */
+export function Stakes() {
+  return (
+    <section id="why" className="py-[clamp(3rem,5.5vw,4.5rem)]">
+      <Container>
+        <Reveal>
+          <SectionHead title="Two minutes is not the cost. Not knowing is.">
+            Pay in this industry stays secret because everyone assumes everyone else already
+            knows. Almost nobody does.
+          </SectionHead>
+        </Reveal>
+
+        <Reveal className="grid gap-[clamp(1rem,2.5vw,1.5rem)] min-[800px]:grid-cols-3">
+          {STAKES.map((item, index) => (
+            <article key={item.title} className="flex flex-col gap-2.5">
+              <span
+                aria-hidden="true"
+                className="figure-num text-lg leading-none font-semibold text-coral"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3 className="text-lg">{item.title}</h3>
+              <p className="text-xs leading-relaxed text-ink-2">{item.body}</p>
+            </article>
+          ))}
+        </Reveal>
+
+        <Reveal>
+          <p className="mt-[clamp(2rem,3.5vw,2.75rem)] max-w-[54ch] border-t border-line pt-6 text-ink-2">
+            <b className="font-semibold text-ink">
+              The only reason engineers do not have this is that engineers do not tell each
+              other.
+            </b>{" "}
+            Which makes it a two-minute problem, and one of the very few where doing the
+            selfish thing and the useful thing are the same action.
+          </p>
+        </Reveal>
+      </Container>
+    </section>
   );
 }
 
@@ -171,11 +252,8 @@ export function SurveyPreview() {
                     key={ask.label}
                     className="flex items-center gap-3 border-t border-line py-[0.62rem] first:border-t-0"
                   >
-                    <span
-                      aria-hidden="true"
-                      className="grid size-5 shrink-0 place-items-center rounded-full bg-wash text-[11px] font-bold text-accent"
-                    >
-                      ✓
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-wash text-accent">
+                      <CheckIcon />
                     </span>
                     {ask.label}
                     {ask.optional && (
@@ -195,11 +273,8 @@ export function SurveyPreview() {
               <ul className="m-0 grid list-none gap-4 p-0">
                 {NEVERS.map(([lead, rest]) => (
                   <li key={lead} className="flex items-start gap-3 text-xs leading-relaxed text-ink-2">
-                    <span
-                      aria-hidden="true"
-                      className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-line-2 text-[10px] text-ink-3"
-                    >
-                      ✕
+                    <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-line-2 text-ink-3">
+                      <CrossIcon />
                     </span>
                     <span>
                       <b className="font-semibold text-ink">{lead}</b>
@@ -231,38 +306,19 @@ export function SurveyPreview() {
 
 const TILES = [
   {
-    title: "Country by country",
-    body: "Medians and quartiles by country, level, and experience — cost-of-living adjusted if you want it, raw if you don't.",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18" />
-        <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z" />
-      </>
-    ),
+    title: "Find out where you sit",
+    body: "Medians and quartiles by country, level and experience, so \"am I underpaid\" stops being a feeling and becomes a percentile — cost-of-living adjusted if you want it, raw if you don't.",
+    Icon: GlobeIcon,
   },
   {
-    title: "Down to your exact seat",
-    body: `Senior backend, Go, 200-person fintech, Lisbon, hybrid. Filter until the sample thins below ${MIN_CELL_SIZE} — then we say so instead of guessing.`,
-    icon: (
-      <>
-        <path d="M4 7h16M4 12h16M4 17h16" />
-        <circle cx="9" cy="7" r="2.2" />
-        <circle cx="15" cy="12" r="2.2" />
-        <circle cx="8" cy="17" r="2.2" />
-      </>
-    ),
+    title: "A number for the actual conversation",
+    body: `Senior backend, Go, 200-person fintech, Lisbon, hybrid. Narrow it to your exact seat and walk in with a quartile instead of a hunch. Filter until the sample thins below ${MIN_CELL_SIZE} and we say so instead of guessing.`,
+    Icon: FiltersIcon,
   },
   {
     title: "The raw file",
     body: "The full anonymised dataset as CSV under CC BY 4.0. Plot it, audit it, argue with it. Rebuilt nightly.",
-    icon: (
-      <>
-        <path d="M6 3h8l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-        <path d="M14 3v5h5" />
-        <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
-      </>
-    ),
+    Icon: FileIcon,
   },
 ];
 
@@ -289,22 +345,8 @@ export function Payoff({ published }: { published: boolean }) {
               key={tile.title}
               className="flex flex-col gap-2.5 rounded-lg border border-line bg-surface p-6 shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-[3px] hover:shadow-md"
             >
-              <span
-                aria-hidden="true"
-                className="mb-2 grid size-[38px] place-items-center rounded-md bg-wash text-accent"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {tile.icon}
-                </svg>
+              <span className="mb-2 grid size-[38px] place-items-center rounded-md bg-wash text-accent">
+                <tile.Icon />
               </span>
               <h3 className="text-lg">{tile.title}</h3>
               <p className="text-xs leading-relaxed text-ink-2">{tile.body}</p>
@@ -431,6 +473,24 @@ export function Closing() {
             <TrustLine items={["Anonymous", "9 questions", "~2 minutes"]} className="mt-0.5" />
           </div>
         </Reveal>
+
+        {/* Second only to answering, and for some visitors it is first: a
+            hiring manager or a lurker cannot add a salary, but they can put
+            this in front of thirty people who can. */}
+        <Reveal>
+          <Share
+            className="mt-[clamp(1rem,2.5vw,1.5rem)]"
+            message={INVITE_MESSAGE}
+            headline="Or send it to someone who will."
+            blurb={
+              <>
+                Nothing is being advertised anywhere and there is no budget behind this. It
+                reaches the next engineer because somebody forwarded it, or it does not reach
+                them at all.
+              </>
+            }
+          />
+        </Reveal>
       </Container>
     </section>
   );
@@ -443,20 +503,27 @@ export function SiteFooter() {
     <Container>
       <footer className="mt-[clamp(3rem,6vw,4.5rem)] flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-line py-8 text-xs text-ink-3">
         <span>whatweearn — open salary data for European engineers. CC BY 4.0.</span>
-        <nav className="flex flex-wrap gap-6">
-          <a href="/methodology" className="no-underline hover:text-ink">
-            Methodology
-          </a>
-          <a href="/source" className="no-underline hover:text-ink">
-            Source
-          </a>
-          <a href="/privacy" className="no-underline hover:text-ink">
-            Privacy
-          </a>
-          <a href="/imprint" className="no-underline hover:text-ink">
-            Imprint
-          </a>
-        </nav>
+        {/* The theme control sits with the site's other housekeeping rather
+            than in the nav, where it was competing for attention with the only
+            action on the page. Grouped with the links so the footer stays two
+            justified blocks instead of three drifting apart. */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+          <nav className="flex flex-wrap gap-6">
+            <a href="/methodology" className="no-underline hover:text-ink">
+              Methodology
+            </a>
+            <a href="/source" className="no-underline hover:text-ink">
+              Source
+            </a>
+            <a href="/privacy" className="no-underline hover:text-ink">
+              Privacy
+            </a>
+            <a href="/imprint" className="no-underline hover:text-ink">
+              Imprint
+            </a>
+          </nav>
+          <ThemeToggle />
+        </div>
       </footer>
     </Container>
   );

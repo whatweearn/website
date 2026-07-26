@@ -31,6 +31,21 @@ export function ordinal(n: number): string {
   return `${n}th`;
 }
 
+/**
+ * Country names that take a definite article in running text.
+ *
+ * Two of the twenty-nine, and both read as broken English without it:
+ * "United Kingdom needs 58 more" is the kind of thing that makes a reader
+ * assume the whole page was generated. It matters most in the share copy,
+ * which goes out under somebody else's name.
+ */
+const ARTICLED = new Set(["Netherlands", "United Kingdom"]);
+
+/** "the Netherlands", but "Germany". */
+export function withArticle(name: string): string {
+  return ARTICLED.has(name) ? `the ${name}` : name;
+}
+
 /** Plain-language reading of a percentile. */
 export function percentilePhrase(p: number): string {
   if (p >= 95) return "percentile — top 5%";

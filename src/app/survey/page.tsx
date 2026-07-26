@@ -49,11 +49,6 @@ export default async function SurveyPage({
             initialLevel={first("level")}
           />
         </div>
-
-        <p className="mt-12 border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
-          Nothing here identifies you. Because of that, we cannot delete one particular response
-          later — we would have no way to tell which one is yours.
-        </p>
       </Container>
     </main>
   );

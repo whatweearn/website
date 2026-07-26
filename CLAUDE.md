@@ -359,6 +359,25 @@ The accessibility audit found real defects, not cosmetic ones:
 - **`color-scheme` was never declared**, so native selects and inputs kept light-mode chrome
   under a dark theme.
 - **The nav overflowed at 320px**, failing WCAG 2.2 reflow.
+- **Large coral buttons were failing 4.5:1 the whole time, and the suite could not
+  see it.** White on `--wwe-coral` is 3.38:1, which only passes under WCAG's large-text
+  rule, and that rule needs 18.66px **bold** or 24px at any weight. `text-lg` is 19.3px
+  and the shared button base set `font-semibold`, so it was never large text. It stayed
+  hidden because the hero button sits on `hero-glow`: axe cannot resolve a gradient to one
+  background colour, so it files the result as **incomplete** rather than a violation, and
+  every scan here asserts only `violations`. Putting the same button on a flat surface
+  failed instantly. **Treat axe `incomplete` as unreviewed, not as passing**, and re-check
+  any token you have only ever seen against a gradient.
+
+  Fixed by deleting the `coralLarge` variant rather than by forcing `font-bold`: every
+  filled button is now `--wwe-accent` at 5.08:1, so size and weight are ordinary design
+  choices again instead of load-bearing contrast machinery. That restores what §10 and
+  `globals.css` both already said — **coral is decorative (bars, marks, washes), accent
+  carries interactive text and fills.** No filled control uses the decorative token now;
+  keep it that way. Weight still lives on `SIZES` in `ui.tsx` rather than `BUTTON_BASE`,
+  because two competing `font-*` weight utilities on one element resolve by emission order
+  and not class order, so a variant adding `font-bold` over a `font-semibold` base loses
+  silently.
 
 The CSP is the "no third-party scripts" promise made enforceable: Cloudflare Turnstile is the
 only external origin allowed anywhere, so an analytics snippet added later gets blocked rather
@@ -381,6 +400,23 @@ Two things follow for whoever picks this up:
   hero and payoff text automatically, so nothing needs flipping by hand — but it also means the
   first publication changes the page's claims. Re-read §1 against the live page on the day that
   happens rather than assuming the switch got every claim right.
+- **The page now argues value first and privacy second, 2026-07-26.** It used to run
+  hero → what we never ask → what you get, which put two screens of things we promise not
+  to do in front of any reason to care. Privacy is what makes this safe to answer; it was
+  never why anyone would want to. `Stakes` in `sections.tsx` carries the argument (you
+  find out years late, the gap compounds, the other side already buys this data) and sits
+  above `SurveyPreview`. The seeding-copy gate still applies to every claim in it: nothing
+  here may promise a payoff that `hasPublishedFigures` says does not exist yet.
+- **Sharing is a mechanism, not a courtesy button.** `Share` in `components/Share.tsx`
+  appears on the confirmation screen (dominant, `prominent`), the landing page and the
+  explorer. The message is pre-written, visible rather than hidden behind the button, and
+  carries the *gap* — "Germany needs 47 more" makes the reader's two minutes consequential
+  where "I answered a survey" asks for a favour. Message text lives in `lib/share.ts` with
+  its own tests, because it is the only copy on the site that goes out under somebody
+  else's name: third person wherever the reader may not have answered, no em dashes, and
+  short enough for X once the URL takes its 23 characters. Every channel is a plain
+  outbound link to a public intent URL — **never add a share SDK**, the CSP would block it
+  and an e2e test asserts no third-party script reaches that page.
 - **Per-country funnel data from the push is the evidence the translation question waits on**
   (§11). It only exists if the push is instrumented enough to tell where people arrived from,
   which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.
@@ -413,6 +449,18 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
 - The two database clients are separate modules with separate credentials. **A single file must
   never import both.** Enforce with a lint rule — this is the anonymity boundary in code form.
 - No third-party scripts on any page.
+- **Icons are inline SVG, and they all live in `src/components/icons.tsx`.** The CSP rules
+  out an icon font or a CDN sprite sheet, so every glyph is hand-inlined — which is why the
+  site drifted into using bare Unicode codepoints (`☀ ☾ ◐ ✓ ✕`) wherever an icon belonged.
+  That is not a style choice, it is a rendering bug waiting to happen: `☀` has an emoji
+  presentation on several platforms, and the rest fall back to whatever font carries them.
+  Draw it instead. Icons are decorative, so they are `aria-hidden` with the control
+  carrying a visible label or an `aria-label` — never an icon as the only name.
+  `→` and `←` stay as text: they sit inline in a sentence, inherit font size, and one is
+  animated by a transform on a text span.
+- **Brand marks are copied from source, never redrawn.** Paths come from simple-icons
+  (CC0) verbatim; a hand-approximated logo looks worse than no logo. LinkedIn is pinned
+  from simple-icons 11.14.0, the last release before they removed it at LinkedIn's request.
 - Tests: unit for stats, property tests for percentiles, Playwright for the survey funnel,
   automated a11y checks. Plus a specific test asserting no response payload contains an email
   and no subscriber row carries a sub-day timestamp.

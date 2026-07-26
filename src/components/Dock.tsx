@@ -57,8 +57,10 @@ export function Dock() {
         visible ? "translate-y-0" : "translate-y-full",
       )}
     >
+      {/* The dock is read at a glance while scrolling past, so it carries the
+          reason rather than the mechanics. The mechanics are on the page. */}
       <p className="hidden text-xs text-ink-2 min-[620px]:block">
-        Nine questions. Anonymous. The dataset opens when you submit.
+        Two minutes, and you stop guessing at your own market rate.
       </p>
       <Button href="/survey" size="sm" arrow className="ml-auto">
         Add your salary

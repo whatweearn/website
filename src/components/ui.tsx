@@ -21,33 +21,89 @@ export const SHELL =
 export const SELECT_CONTROL = cx(SHELL, "appearance-none py-3 pr-10 pl-4 text-base text-ink");
 
 const BUTTON_BASE =
-  "inline-flex items-center justify-center gap-2 rounded-full font-display font-semibold " +
+  "inline-flex items-center justify-center gap-2 rounded-full font-display " +
   "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,transform,border-color,color] " +
   "duration-200 group";
 
+/**
+ * Weight lives here rather than in {@link BUTTON_BASE} because it has to be
+ * settable per size, and two competing `font-*` weight utilities on one
+ * element do not resolve by class order — they resolve by whichever rule
+ * Tailwind emitted last, which is not something a caller can see or control.
+ * A `font-bold` variant added on top of a `font-semibold` base silently lost.
+ */
 const SIZES = {
-  sm: "px-[1.2rem] py-[0.68rem] text-xs",
-  base: "px-[1.65rem] py-4 text-base",
-  lg: "px-[2.1rem] py-[1.15rem] text-lg",
+  sm: "px-[1.2rem] py-[0.68rem] text-xs font-semibold",
+  base: "px-[1.65rem] py-4 text-base font-semibold",
+  lg: "px-[2.1rem] py-[1.15rem] text-lg font-semibold",
 } as const;
 
 /**
- * Coral is reserved for the two conversion moments (hero and dock). Large
- * buttons take the brighter coral because they clear AA at 3:1; small ones
- * keep the deeper accent, which they need for 4.5:1.
+ * One filled coral, at every size, and it is `--wwe-accent`.
+ *
+ * Large buttons used to take the brighter `--wwe-coral` on the reasoning that
+ * they cleared AA at 3:1. They did not. White on `--wwe-coral` is 3.38:1,
+ * which only passes under WCAG's large-text rule, and that rule wants 18.66px
+ * **bold** or 24px at any weight — `text-lg` is 19.3px, so at semibold it was
+ * never large text and the real bar was 4.5:1. It had been failing since the
+ * palette was solved, and it stayed invisible because the hero button sits on
+ * `hero-glow`: axe cannot resolve a gradient to one background colour, files
+ * the result as *incomplete* rather than a violation, and every scan here
+ * asserts only violations. Putting the same button on the share card's flat
+ * surface failed instantly.
+ *
+ * Bolting the weight to 700 would have propped it up. Moving to `--wwe-accent`
+ * removes the dependency instead: 5.08:1, so size and weight are free design
+ * choices again, and it restores what `globals.css` has always claimed — coral
+ * is decorative (bars, marks, washes), accent carries interactive fills. There
+ * is now no filled control anywhere using the decorative token.
+ *
+ * Treat axe `incomplete` as unreviewed, not as passing.
+ */
+/*
+ * Every variant declares a border, and the filled ones make theirs transparent.
+ * Without it a ghost button standing next to a filled one is 2px taller — the
+ * border is outside the padding box at `height: auto` — which is exactly how
+ * the share card's two buttons ended up mismatched.
+ *
+ * The transparent border is set here per variant rather than once in
+ * {@link BUTTON_BASE}, so each element carries exactly one border-colour
+ * utility. Two of them would resolve by emission order rather than class
+ * order, the same trap that made `font-bold` lose to `font-semibold`.
  */
 const VARIANTS = {
-  coral: "bg-accent text-on-accent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
-  coralLarge: "bg-coral text-on-accent shadow-sm hover:bg-accent hover:shadow-md hover:-translate-y-px",
-  ink: "bg-ink text-on-ink shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
+  coral:
+    "bg-accent text-on-accent border border-transparent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
+  ink: "bg-ink text-on-ink border border-transparent shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
   ghost: "bg-transparent text-ink border border-line-2 hover:bg-tint hover:border-ink-3",
 } as const;
+
+export type ButtonVariant = keyof typeof VARIANTS;
+export type ButtonSize = keyof typeof SIZES;
+
+/**
+ * The class list a {@link Button} carries, for controls that cannot be one.
+ *
+ * `Button` renders a `Link`, so anything that runs an action rather than
+ * navigating has to be a real `<button>` and used to hand-roll its own
+ * padding. They drifted immediately: the share card ended up with a primary at
+ * `py-[1.15rem] text-lg` beside a secondary at `py-3 text-xs`, two different
+ * heights sitting in the same row, and the primary had missed `leading-none`
+ * so its line box inflated it further. Take the tokens from here instead.
+ */
+export function buttonClasses(
+  variant: ButtonVariant = "coral",
+  size: ButtonSize = "base",
+  className?: string,
+): string {
+  return cx(BUTTON_BASE, SIZES[size], VARIANTS[variant], className);
+}
 
 type ButtonProps = {
   href: string;
   children: ReactNode;
-  variant?: "coral" | "ink" | "ghost";
-  size?: keyof typeof SIZES;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   arrow?: boolean;
   className?: string;
   id?: string;
@@ -62,13 +118,8 @@ export function Button({
   className,
   id,
 }: ButtonProps) {
-  const resolved = variant === "coral" && size === "lg" ? "coralLarge" : variant;
   return (
-    <Link
-      id={id}
-      href={href}
-      className={cx(BUTTON_BASE, SIZES[size], VARIANTS[resolved], className)}
-    >
+    <Link id={id} href={href} className={buttonClasses(variant, size, className)}>
       {children}
       {arrow && (
         <span
