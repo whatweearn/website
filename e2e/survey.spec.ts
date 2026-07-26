@@ -215,10 +215,25 @@ test.describe("survey funnel", () => {
 test.describe("landing page", () => {
   test("says so plainly when there is nothing to publish", async ({ page }) => {
     await page.goto("/");
-    // Pre-launch, the honest state is a named empty state — not a zero, and
-    // certainly not a placeholder figure.
+    // Pre-publication, the honest state is a named empty state — not a zero,
+    // and certainly not a placeholder figure.
     await expect(page.getByText("No distribution yet")).toBeVisible();
-    await expect(page.getByText(/engineers have answered/)).toHaveCount(0);
+    await expect(page.getByText("Not enough answers yet")).toBeVisible();
+
+    // This used to assert that "engineers have answered" appeared nowhere,
+    // which conflated "nothing has published" with "nobody has answered".
+    // They are different states, and the gap between them is where the site
+    // now lives: real responses, no figures yet. A true response count is
+    // deliberately shown once it exists. What must never appear before
+    // publication is a *figure*, so that is what is asserted instead.
+    //
+    // A money amount, not the word "median" — that appears throughout the
+    // copy explaining why nothing is published, which is the honesty working
+    // rather than a leak.
+    const body = (await page.locator("body").innerText()).replace(/ /g, " ");
+    expect(body, "a currency figure appeared before anything published").not.toMatch(
+      /€\s?\d/,
+    );
   });
 
   test("routes the hero call to action into the survey", async ({ page }) => {

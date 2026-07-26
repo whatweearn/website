@@ -1,8 +1,194 @@
 {
-  "totalResponses": 0,
-  "countriesCovered": 0,
+  "totalResponses": 9,
+  "countriesCovered": 5,
   "europe": null,
-  "countries": [],
-  "cuts": {},
+  "countries": [
+    {
+      "name": "United Kingdom",
+      "currency": "GBP",
+      "responses": 2,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "name": "Belgium",
+      "currency": "EUR",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "name": "Finland",
+      "currency": "EUR",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "name": "Romania",
+      "currency": "RON",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "name": "Sweden",
+      "currency": "SEK",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    }
+  ],
+  "dayRates": [
+    {
+      "name": "Belgium",
+      "responses": 2,
+      "median": null,
+      "p25": null,
+      "p75": null
+    }
+  ],
+  "cuts": {
+    "BE|senior": {
+      "country": "BE",
+      "level": "senior",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "BE|*": {
+      "country": "BE",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "*|senior": {
+      "country": null,
+      "level": "senior",
+      "responses": 4,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "*|*": {
+      "country": null,
+      "level": null,
+      "responses": 6,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "FI|senior": {
+      "country": "FI",
+      "level": "senior",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "FI|*": {
+      "country": "FI",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "RO|principal": {
+      "country": "RO",
+      "level": "principal",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "RO|*": {
+      "country": "RO",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "*|principal": {
+      "country": null,
+      "level": "principal",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "SE|senior": {
+      "country": "SE",
+      "level": "senior",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "SE|*": {
+      "country": "SE",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "UK|mid": {
+      "country": "UK",
+      "level": "mid",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "UK|*": {
+      "country": "UK",
+      "level": null,
+      "responses": 2,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "*|mid": {
+      "country": null,
+      "level": "mid",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "UK|senior": {
+      "country": "UK",
+      "level": "senior",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    }
+  },
   "datasetRows": 0
 }

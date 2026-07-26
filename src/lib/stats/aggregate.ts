@@ -1,16 +1,17 @@
 import { type RateInput, annualise } from "../survey/annualise";
 import { COUNTRIES } from "../survey/options";
-import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
-import { type RateTable, totalCompEuro } from "../fx/convert";
+import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, isDayRatePublishable } from "../thresholds";
+import { type RateTable, toEuro, totalCompEuro } from "../fx/convert";
 import {
   type CountryRow,
   type Cut,
+  type DayRateRow,
   type Distribution,
   type SiteStats,
   cutKey,
 } from "../stats";
 
-import { isEmployeeContract, isHeadlineEligible } from "./eligibility";
+import { isDayRateEligible, isEmployeeContract, isHeadlineEligible } from "./eligibility";
 import { bins, summarise, trim } from "./quantiles";
 
 export type AggregateRow = RateInput & {
@@ -113,10 +114,68 @@ export function aggregate(rows: readonly AggregateRow[], rates: RateTable): Aggr
       countriesCovered: byCountry.size,
       europe,
       countries,
+      dayRates: buildDayRates(rows, rates, bump),
       cuts: buildCuts(eligible),
     },
     skipped: [...skipped].map(([reason, count]) => ({ reason, count })),
   };
+}
+
+/**
+ * What contractors charge per day, by country.
+ *
+ * Note what is *not* here: no bonus, no equity, no annualisation. The quoted
+ * day rate converted to euro, and nothing else. Adding a bonus to a day rate
+ * would be mixing a price with an annual total, and multiplying by billed days
+ * is the exact thing {@link isDayRateEligible} exists to avoid.
+ *
+ * Trimmed on the same p1/p99 rule as everything else, and suppressed against
+ * its own threshold — see {@link DAY_RATE_PUBLISH_MIN} for why that number is
+ * lower than the one governing salaries.
+ */
+function buildDayRates(
+  rows: readonly AggregateRow[],
+  rates: RateTable,
+  bump: (reason: string) => void,
+): DayRateRow[] {
+  const byCountry = new Map<string, number[]>();
+
+  for (const row of rows) {
+    if (!isDayRateEligible(row)) continue;
+    let euroPerDay: number;
+    try {
+      euroPerDay = Math.round(toEuro(row.baseSalary, row.currency, rates));
+    } catch {
+      bump("day_rate_missing_exchange_rate");
+      continue;
+    }
+    const list = byCountry.get(row.country);
+    if (list) list.push(euroPerDay);
+    else byCountry.set(row.country, [euroPerDay]);
+  }
+
+  const out: DayRateRow[] = [];
+  for (const [code, values] of byCountry) {
+    const meta = COUNTRY_NAMES.get(code as never);
+    if (!meta) {
+      bump("unknown_country");
+      continue;
+    }
+    const responses = values.length;
+    const summary = isDayRatePublishable(responses)
+      ? summarise(trim([...values].sort((a, b) => a - b)))
+      : null;
+
+    out.push({
+      name: meta.name,
+      responses,
+      median: summary?.median ?? null,
+      p25: summary?.p25 ?? null,
+      p75: summary?.p75 ?? null,
+    });
+  }
+
+  return out.sort((a, b) => (b.median ?? -1) - (a.median ?? -1) || b.responses - a.responses);
 }
 
 /**

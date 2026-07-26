@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CountryProgress } from "@/components/CountryProgress";
+import { DayRates } from "@/components/DayRates";
 import { Explorer } from "@/components/Explorer";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { Container } from "@/components/ui";
 import { count } from "@/lib/format";
 import {
   countriesNearingPublication,
+  dayRatesByCountry,
   getSiteStats,
   hasPublishedFigures,
 } from "@/lib/stats";
@@ -49,6 +51,8 @@ export default async function DataPage() {
         <div className="mt-10">
           <Explorer stats={stats} />
         </div>
+
+        <DayRates rows={dayRatesByCountry(stats)} />
 
         <CountryProgress countries={countriesNearingPublication(stats)} />
 

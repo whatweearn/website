@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
 
+import { DAY_RATE_PUBLISH_MIN } from "../thresholds";
 import { type AggregateRow, aggregate, isHeadlineEligible } from "./aggregate";
 
 const RATES = { EUR: 1, PLN: 4.3, CHF: 0.95, GBP: 0.84 };
@@ -129,5 +130,85 @@ describe("aggregate", () => {
     expect(names[0]).toBe("Switzerland");
     expect(names[1]).toBe("Germany");
     expect(names.at(-1)).toBe("Portugal");
+  });
+});
+
+describe("contractor day rates", () => {
+  const dayRate = (over: Partial<AggregateRow> = {}): AggregateRow => ({
+    country: "BE",
+    level: "senior",
+    contractType: "contractor",
+    ftePercent: null,
+    baseSalary: 700,
+    salaryPeriod: "day",
+    bonus: null,
+    equityAnnual: null,
+    currency: "EUR",
+    ...over,
+  });
+
+  const rates = { EUR: 1, GBP: 0.85 };
+
+  it("reports the quoted rate, never an annualised one", () => {
+    // The whole point: 700/day stays 700, it does not become 700 × billed days.
+    const { stats } = aggregate([dayRate({ daysPerYear: 220 })], rates);
+    expect(stats.dayRates?.[0]?.responses).toBe(1);
+  });
+
+  it("ignores bonus and equity, which are annual totals not prices", () => {
+    const withExtras = Array.from({ length: DAY_RATE_PUBLISH_MIN }, () =>
+      dayRate({ bonus: 50_000, equityAnnual: 20_000 }),
+    );
+    const { stats } = aggregate(withExtras, rates);
+    expect(stats.dayRates?.[0]?.median).toBe(700);
+  });
+
+  it("excludes employees, whose day rate is not pricing the same thing", () => {
+    const { stats } = aggregate([dayRate({ contractType: "permanent" })], rates);
+    expect(stats.dayRates ?? []).toHaveLength(0);
+  });
+
+  it("excludes contractors who quoted anything other than a day rate", () => {
+    const rows = [
+      dayRate({ salaryPeriod: "year", baseSalary: 150_000 }),
+      dayRate({ salaryPeriod: "hour", baseSalary: 90, hoursPerYear: 1600 }),
+      dayRate({ salaryPeriod: null }),
+    ];
+    const { stats } = aggregate(rows, rates);
+    expect(stats.dayRates ?? []).toHaveLength(0);
+  });
+
+  it("withholds the figures below the day-rate threshold but keeps the count", () => {
+    const rows = Array.from({ length: DAY_RATE_PUBLISH_MIN - 1 }, () => dayRate());
+    const { stats } = aggregate(rows, rates);
+    expect(stats.dayRates?.[0]?.responses).toBe(DAY_RATE_PUBLISH_MIN - 1);
+    expect(stats.dayRates?.[0]?.median).toBeNull();
+  });
+
+  it("publishes once the threshold is reached", () => {
+    const rows = Array.from({ length: DAY_RATE_PUBLISH_MIN }, (_, i) =>
+      dayRate({ baseSalary: 600 + i * 10 }),
+    );
+    const { stats } = aggregate(rows, rates);
+    expect(stats.dayRates?.[0]?.median).toBeGreaterThan(600);
+    expect(stats.dayRates?.[0]?.p25).toBeLessThan(stats.dayRates![0]!.median!);
+  });
+
+  it("converts to euro rather than comparing currencies directly", () => {
+    const rows = Array.from({ length: DAY_RATE_PUBLISH_MIN }, () =>
+      dayRate({ country: "UK", baseSalary: 850, currency: "GBP" }),
+    );
+    const { stats } = aggregate(rows, rates);
+    expect(stats.dayRates?.[0]?.median).toBe(1000);
+  });
+
+  it("does not let day rates reach the salary medians", () => {
+    // The salary side must be untouched by any of this.
+    const { stats } = aggregate(
+      Array.from({ length: DAY_RATE_PUBLISH_MIN }, () => dayRate()),
+      rates,
+    );
+    expect(stats.countries).toHaveLength(0);
+    expect(stats.europe).toBeNull();
   });
 });

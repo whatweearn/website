@@ -26,6 +26,35 @@ export const MIN_CELL_SIZE = 5;
  */
 export const COUNTRY_PUBLISH_MIN = 60;
 
+/**
+ * A country's contractor day-rate median publishes once it clears this many
+ * quoted day rates.
+ *
+ * Deliberately lower than {@link COUNTRY_PUBLISH_MIN}, and the reason is
+ * statistical rather than a concession to low volume. A day rate is a single
+ * negotiated price: no bonus, no equity, no thirteenth month, no part-time
+ * fraction, none of the variance that makes total compensation a wide
+ * distribution needing sixty observations to pin down. It also carries none of
+ * that variance's asymmetry, so the median settles far sooner.
+ *
+ * It remains five times {@link MIN_CELL_SIZE}, because the privacy floor and
+ * the statistical floor are different rules and this is the statistical one.
+ * Quoted on the methodology page — keep the two in step.
+ */
+export const DAY_RATE_PUBLISH_MIN = 25;
+
+/** Whether a country's day-rate figures may be published. */
+export function isDayRatePublishable(rates: number): boolean {
+  assertCount(rates, "rates");
+  return rates >= DAY_RATE_PUBLISH_MIN;
+}
+
+/** How many more day rates a country needs before its median publishes. */
+export function dayRatesUntilPublish(rates: number): number {
+  assertCount(rates, "rates");
+  return Math.max(0, DAY_RATE_PUBLISH_MIN - rates);
+}
+
 /** Percentiles at which published statistics are trimmed. Both ends. */
 export const TRIM_LOWER_PERCENTILE = 1;
 export const TRIM_UPPER_PERCENTILE = 99;

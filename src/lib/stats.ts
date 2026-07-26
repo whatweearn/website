@@ -41,6 +41,24 @@ export type CountryRow = {
 };
 
 /**
+ * What contractors charge per day, in one country.
+ *
+ * A separate shape rather than another axis on {@link Cut}, because the unit is
+ * different: these are euro *per day*, not euro per year. Sharing a keyspace
+ * with annual figures would eventually let something render a €700 day rate as
+ * a €700 salary, and nothing about the type would object.
+ */
+export type DayRateRow = {
+  name: string;
+  /** Day rates quoted, whether or not the figures below are published. */
+  responses: number;
+  /** Euro per day. Null until the country clears the day-rate threshold. */
+  median: number | null;
+  p25: number | null;
+  p75: number | null;
+};
+
+/**
  * One filtered view of the data.
  *
  * `country`/`level` are null for "everywhere"/"all levels", so the same shape
@@ -64,6 +82,14 @@ export type SiteStats = {
   /** Null until there is enough data to draw anything honest. */
   europe: Distribution | null;
   countries: CountryRow[];
+  /**
+   * Contractor day rates by country. Separate from `countries` because the
+   * population and the unit are both different — see {@link DayRateRow}.
+   *
+   * Optional so a `stats.json` generated before this existed still loads
+   * rather than failing the build. The aggregation always writes it.
+   */
+  dayRates?: DayRateRow[];
   /** Every filterable slice, keyed by `country|level` with `*` for "any". */
   cuts: Record<string, Cut>;
   /** Set once the downloadable dataset has been generated. */
@@ -122,6 +148,19 @@ export function countriesNearingPublication(
     .slice(0, limit);
 }
 
+/**
+ * Countries with at least one quoted day rate, most rates first.
+ *
+ * Unlike {@link countriesNearingPublication} this keeps countries that have
+ * already published: a contractor comparing rates wants the published ones
+ * most of all.
+ */
+export function dayRatesByCountry(stats: SiteStats): readonly DayRateRow[] {
+  return [...(stats.dayRates ?? [])].sort(
+    (a, b) => b.responses - a.responses || a.name.localeCompare(b.name),
+  );
+}
+
 export function totalCount(d: Distribution): number {
   return d.bins.reduce((sum, bin) => sum + bin.count, 0);
 }
@@ -170,6 +209,7 @@ export const EMPTY_STATS: SiteStats = {
   countriesCovered: 0,
   europe: null,
   countries: [],
+  dayRates: [],
   cuts: {},
 };
 

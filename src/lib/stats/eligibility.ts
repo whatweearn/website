@@ -55,3 +55,28 @@ export function isHeadlineEligible(row: EligibilityInput): boolean {
   if (row.ftePercent !== null && row.ftePercent < MIN_FTE_PERCENT) return false;
   return true;
 }
+
+/**
+ * Which responses belong in the contractor day-rate view.
+ *
+ * Two conditions, and both matter.
+ *
+ * **Quoted per day.** Only rates the respondent actually gave as a day rate.
+ * Deriving one by dividing an annual figure by billed days would put utilisation
+ * straight back into a number whose whole purpose is to be free of it: €700 a
+ * day is €154,000 over 220 billed days and €84,000 over 120, so a median of
+ * annualised contractor income measures how much people worked as much as what
+ * they charge. Hourly rates are excluded too, since converting them would mean
+ * assuming the length of a working day.
+ *
+ * **Not an employee.** The same gross-versus-net problem that keeps B2B out of
+ * the headline median applies in reverse here: an employee quoting a day rate
+ * is not pricing the same thing as a contractor who carries their own social
+ * contributions. Contractor and B2B sit together because both bear those
+ * contributions; that is a far smaller difference than either has with
+ * employment.
+ */
+export function isDayRateEligible(row: EligibilityInput & { salaryPeriod?: string | null }): boolean {
+  if (isEmployeeContract(row.contractType)) return false;
+  return row.salaryPeriod === "day";
+}

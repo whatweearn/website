@@ -4,6 +4,7 @@ import { LegalPage, Points, Section } from "@/components/legal";
 import { SOURCE_URL } from "@/lib/legal";
 import {
   COUNTRY_PUBLISH_MIN,
+  DAY_RATE_PUBLISH_MIN,
   MIN_CELL_SIZE,
   TRIM_LOWER_PERCENTILE,
   TRIM_UPPER_PERCENTILE,
@@ -121,6 +122,10 @@ export default function MethodologyPage() {
             [
               `Fewer than ${COUNTRY_PUBLISH_MIN} responses`,
               "No median published for that slice. This is a statistical rule, deliberately much higher than the privacy one: a median over six people is not a median worth printing.",
+            ],
+            [
+              `Fewer than ${DAY_RATE_PUBLISH_MIN} contractor day rates`,
+              `No day-rate median for that country. Lower than the ${COUNTRY_PUBLISH_MIN} a salary median needs, because a day rate is a single negotiated price with no bonus, equity, thirteenth month or part-time fraction in it. Less of that variance means the median settles on fewer answers; it is not a lower standard applied to get something on the page sooner.`,
             ],
           ]}
         />
