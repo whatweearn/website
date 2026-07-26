@@ -74,8 +74,8 @@ export default async function DataPage() {
           headline={published ? "Make them sharper." : "This is how the bars move."}
           blurb={
             published
-              ? "Every further answer narrows the figures above, including for whoever you send it to. Nothing here is advertised anywhere, so the next engineer arrives because somebody sent it to them."
-              : "Those bars fill because people send this to other engineers, and the engineer you send it to gets the same two minutes and the same answer out of it that you would."
+              ? "Every further answer narrows the figures above. Nothing here is advertised anywhere, so the next engineer arrives because somebody sent it to them."
+              : "Nothing here is advertised anywhere and there is no budget behind it. Those bars fill because people send this to other engineers, which is a thirty-second job with a much better return than most."
           }
         />
 

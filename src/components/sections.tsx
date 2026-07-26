@@ -484,9 +484,9 @@ export function Closing() {
             headline="Or send it to someone who will."
             blurb={
               <>
-                You are not asking them for a favour. Whoever you send this to gets the same
-                thing you do, for the same two minutes, and it reaches them because somebody
-                forwarded it or it does not reach them at all.
+                Nothing is being advertised anywhere and there is no budget behind this. It
+                reaches the next engineer because somebody forwarded it, or it does not reach
+                them at all.
               </>
             }
           />
