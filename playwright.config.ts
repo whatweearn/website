@@ -27,6 +27,26 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 180_000,
     env: {
+      // Blanked so the suite can never reach a real database.
+      //
+      // `next start` loads `.env.local`, and on a developer's machine that
+      // holds the *production* credentials. Without these four lines the funnel
+      // tests submit their fixture — Germany, senior, 78000 — straight into the
+      // live responses table, which is exactly what happened on 2026-07-26:
+      // two rows, one per project user-agent, the same-day dedup handle having
+      // collapsed the repeat runs. They then reached the published figures on
+      // the next aggregation, so the site reported responses that no person had
+      // given. On a site whose whole claim is that its numbers are checkable,
+      // that is the worst possible kind of bug.
+      //
+      // Empty means `hasDatabase()` is false and `getRepository()` returns the
+      // in-memory implementation, which is what CI has always done — CI sets no
+      // database secrets for this workflow. The suite now behaves identically
+      // in both places, and it was the divergence that hid this.
+      DATABASE_URL: "",
+      DATABASE_URL_DIRECT: "",
+      SUBSCRIBER_DATABASE_URL: "",
+      SUBSCRIBER_DATABASE_URL_DIRECT: "",
       // `next start` runs as production, where the app refuses to fall back to
       // development secrets — correctly. These are throwaway values that exist
       // only so the suite can boot; they are not secrets and never leave here.

@@ -209,11 +209,45 @@ After any rotation, in order:
 pnpm verify:separation                     # still two instances, not one twice
 pnpm dlx tsx scripts/vercel-env.ts         # copy to Vercel
 pnpm dlx vercel deploy --prod
+
+# CI holds its own copy. Piped, never pasted — see below.
+node -e 'process.stdout.write(require("node:util").parseEnv(require("node:fs").readFileSync(".env.local","utf8")).DATABASE_URL)' \
+  | gh secret set DATABASE_URL
+node -e 'process.stdout.write(require("node:util").parseEnv(require("node:fs").readFileSync(".env.local","utf8")).DATABASE_URL_DIRECT)' \
+  | gh secret set DATABASE_URL_DIRECT
 ```
 
 `verify:separation` matters most here. A copy-paste during a hurried rotation is
 all it takes to point both variables at one database, and every test would still
 pass while the site kept promising the two can never be joined.
+
+**The CI step is here because omitting it broke the nightly aggregation on
+2026-07-26.** Vercel is not the only consumer of the responses credential:
+`.github/workflows/aggregate.yml` needs `DATABASE_URL` and `DATABASE_URL_DIRECT`
+to rebuild the published figures, and those secrets are a separate copy that
+`scripts/vercel-env.ts` does not reach. The rotation updated the application and
+left CI on the previous day's password. Nothing alerted, because a scheduled job
+that goes red on a repo nobody is watching is indistinguishable from one that
+never ran. It would have surfaced as "why has nothing published?" after the
+seeding push, which is the worst moment to discover it.
+
+Two failures were stacked, and the order matters when fixing it: the secret was
+*stale* **and** *malformed*, because the value had been pasted out of
+`.env.local` with its trailing comment. `assertConnectionString` runs before the
+driver, so the format error fires first and hides the authentication failure
+underneath. Fixing only the format reveals a second, different error.
+
+Pipe, never paste. The commands above read through Node's `parseEnv` — the same
+grammar `scripts/vercel-env.ts` uses, and for the same reason its docstring
+gives: quoting and comments are a grammar, not a regex. `gh secret set` takes
+the value on stdin, so it reaches neither the terminal nor shell history. Every
+connection string in `.env.local` carries a trailing comment, so a hand-copied
+line is guaranteed to be wrong; this is designed out rather than warned about.
+
+The subscriber credentials are deliberately absent from CI. The aggregation job
+has no reason to reach that database, and not giving it the credential is how
+that stays true — so `SUBSCRIBER_DATABASE_URL` must never be added as an Actions
+secret, whatever a future job seems to need.
 
 ### 1b-ter. Test data purged before launch — 2026-07-26
 
