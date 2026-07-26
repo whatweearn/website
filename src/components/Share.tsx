@@ -2,7 +2,7 @@
 
 import { type ReactNode, useId, useState, useSyncExternalStore } from "react";
 
-import { cx } from "./ui";
+import { buttonClasses, cx } from "./ui";
 
 /**
  * Sharing, as a first-class mechanism rather than a courtesy button.
@@ -138,6 +138,7 @@ export function Share({
   const url = useShareUrl(path);
   const canUseSheet = useShareSheet();
   const [copied, setCopied] = useState(false);
+  const size = prominent ? "lg" : "base";
   // Generated rather than fixed, because two of these on one page would
   // otherwise duplicate the id and leave both regions pointing at one heading.
   const headingId = useId();
@@ -199,31 +200,15 @@ export function Share({
         {message} <span className="text-accent">{url}</span>
       </p>
 
+      {/* Both take their tokens from `buttonClasses`, at one size, so they
+          share a height instead of being sized by hand and drifting apart. */}
       <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={primary}
-          className={cx(
-            "inline-flex cursor-pointer items-center gap-2 rounded-full",
-            "font-display font-semibold whitespace-nowrap text-on-accent",
-            "bg-accent transition-[background-color,box-shadow,transform] duration-200",
-            "hover:-translate-y-px hover:bg-accent-hover hover:shadow-md",
-            // Deliberately the same tokens a real Button would apply, which
-            // this cannot be: Button renders a Link, and this runs an action.
-            prominent
-              ? "px-[2.1rem] py-[1.15rem] text-lg"
-              : "px-[1.65rem] py-4 text-base",
-          )}
-        >
+        <button type="button" onClick={primary} className={buttonClasses("coral", size)}>
           {copied ? "Copied, go paste it" : canUseSheet ? "Share it" : "Copy the message"}
         </button>
 
         {canUseSheet && (
-          <button
-            type="button"
-            onClick={copy}
-            className="inline-flex cursor-pointer items-center rounded-full border border-line-2 px-5 py-3 font-display text-xs font-semibold text-ink transition-colors hover:bg-tint"
-          >
+          <button type="button" onClick={copy} className={buttonClasses("ghost", size)}>
             {copied ? "Copied" : "Copy instead"}
           </button>
         )}

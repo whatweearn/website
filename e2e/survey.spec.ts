@@ -651,6 +651,20 @@ test.describe("when the browser check cannot run", () => {
   });
 });
 
+test("buttons sitting in the same row are the same height", async ({ page }) => {
+  // The hero's filled + ghost pair is the same shape as the share card's, and
+  // both were mismatched: a ghost button's border sits outside the padding box
+  // at `height: auto`, so it stood 2px taller than the filled one beside it.
+  // Cheap to reintroduce by hand-rolling one control's padding, so it is
+  // measured rather than trusted.
+  await page.goto("/");
+  const heights = await page
+    .locator("#cta-hero, #cta-hero ~ a")
+    .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)));
+  expect(heights.length).toBeGreaterThan(1);
+  expect(new Set(heights).size, `heights were ${heights.join(", ")}`).toBe(1);
+});
+
 test.describe("the promise matches reality", () => {
   test("does not claim the dataset opens when nothing has published", async ({ page }) => {
     // The hero promised "the whole dataset opens the moment you're done" while

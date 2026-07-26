@@ -60,17 +60,50 @@ const SIZES = {
  *
  * Treat axe `incomplete` as unreviewed, not as passing.
  */
+/*
+ * Every variant declares a border, and the filled ones make theirs transparent.
+ * Without it a ghost button standing next to a filled one is 2px taller — the
+ * border is outside the padding box at `height: auto` — which is exactly how
+ * the share card's two buttons ended up mismatched.
+ *
+ * The transparent border is set here per variant rather than once in
+ * {@link BUTTON_BASE}, so each element carries exactly one border-colour
+ * utility. Two of them would resolve by emission order rather than class
+ * order, the same trap that made `font-bold` lose to `font-semibold`.
+ */
 const VARIANTS = {
-  coral: "bg-accent text-on-accent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
-  ink: "bg-ink text-on-ink shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
+  coral:
+    "bg-accent text-on-accent border border-transparent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
+  ink: "bg-ink text-on-ink border border-transparent shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
   ghost: "bg-transparent text-ink border border-line-2 hover:bg-tint hover:border-ink-3",
 } as const;
+
+export type ButtonVariant = keyof typeof VARIANTS;
+export type ButtonSize = keyof typeof SIZES;
+
+/**
+ * The class list a {@link Button} carries, for controls that cannot be one.
+ *
+ * `Button` renders a `Link`, so anything that runs an action rather than
+ * navigating has to be a real `<button>` and used to hand-roll its own
+ * padding. They drifted immediately: the share card ended up with a primary at
+ * `py-[1.15rem] text-lg` beside a secondary at `py-3 text-xs`, two different
+ * heights sitting in the same row, and the primary had missed `leading-none`
+ * so its line box inflated it further. Take the tokens from here instead.
+ */
+export function buttonClasses(
+  variant: ButtonVariant = "coral",
+  size: ButtonSize = "base",
+  className?: string,
+): string {
+  return cx(BUTTON_BASE, SIZES[size], VARIANTS[variant], className);
+}
 
 type ButtonProps = {
   href: string;
   children: ReactNode;
-  variant?: "coral" | "ink" | "ghost";
-  size?: keyof typeof SIZES;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   arrow?: boolean;
   className?: string;
   id?: string;
@@ -86,11 +119,7 @@ export function Button({
   id,
 }: ButtonProps) {
   return (
-    <Link
-      id={id}
-      href={href}
-      className={cx(BUTTON_BASE, SIZES[size], VARIANTS[variant], className)}
-    >
+    <Link id={id} href={href} className={buttonClasses(variant, size, className)}>
       {children}
       {arrow && (
         <span
