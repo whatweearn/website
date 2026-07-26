@@ -338,9 +338,15 @@ first send; the double opt-in confirmation goes out immediately so the sender na
 recognised a year later; and a short mid-cycle note so the results blast is not the first
 contact in twelve months. Add a lint/test asserting we never call Resend's Audiences API.
 
-**Phase 6 — launch.** *Mostly done.* Privacy and methodology pages, security headers, WCAG 2.2
-AA audit, robots/sitemap. Operational runbook in `OPERATIONS.md` (launch checklist, backups,
-monitoring, incident response).
+**Phase 6 — launch.** *Shipped 2026-07-26 — the site is live at `whatweearn.eu` and taking
+responses.* Privacy and methodology pages, security headers, WCAG 2.2 AA audit, robots/sitemap.
+Operational runbook in `OPERATIONS.md` (launch checklist, backups, monitoring, incident
+response). Public repository, nightly aggregation running from GitHub Actions.
+
+Live does not mean finished, and the remaining checklist items in `OPERATIONS.md` §1 are the
+current list: a monitored `privacy@` inbox, DMARC, the DPAs, and a lawyer's read of the
+imprint. None of them block a response being submitted; the email ones block the first
+broadcast, which is eleven months out.
 
 The accessibility audit found real defects, not cosmetic ones:
 
@@ -362,10 +368,22 @@ the comment in `next.config.ts`.
 **Not done:** Lighthouse budgets in CI, and a load test. The site is static plus one write
 endpoint, so the load profile is thin; the honest gap is that neither has been measured.
 
-**Phase 7 — cold start.** The hardest unsolved problem: the survey is worthless below ~500
-responses and there is no data to attract them with. Plan the seeding push (HN, lobste.rs,
-national dev communities, EU tech newsletters) as actual work, not an afterthought. Do not
-launch with fake data to prime the pump — it would destroy the one asset this project has.
+**Phase 7 — cold start.** *Current phase.* The hardest unsolved problem: the survey is worthless
+below ~500 responses and there is no data to attract them with. Plan the seeding push (HN,
+lobste.rs, national dev communities, EU tech newsletters) as actual work, not an afterthought.
+Do not launch with fake data to prime the pump — it would destroy the one asset this project has.
+
+The site being live changes the shape of this, not the difficulty. Everything technical is in
+place and the count is zero, so from here the only thing that moves the project is reach.
+Two things follow for whoever picks this up:
+
+- **The seeding copy is load-bearing while the count is low.** `hasPublishedFigures` swaps the
+  hero and payoff text automatically, so nothing needs flipping by hand — but it also means the
+  first publication changes the page's claims. Re-read §1 against the live page on the day that
+  happens rather than assuming the switch got every claim right.
+- **Per-country funnel data from the push is the evidence the translation question waits on**
+  (§11). It only exists if the push is instrumented enough to tell where people arrived from,
+  which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.
 
 ---
 
@@ -425,10 +443,16 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
   ~200 short stable strings — and **never** machine-translate `/privacy` or `/imprint`, where
   multiple versions raise which-version-governs against a named controller.
 
-  Outstanding: the local terms are researched, not authoritative. They need a native speaker's
-  review per country before launch — a wrong contract form here corrupts the headline figure
-  silently. Switzerland is deliberately absent (three working languages; picking one misleads
-  the other two), as are BG, EE, HR, HU, LT, LV, RS, SI, SK and UA.
+  Outstanding, and **the site went live without it**: the local terms are researched, not
+  authoritative, and still want a native speaker's review per country — a wrong contract form
+  here corrupts the headline figure silently. This is now the highest-value item on the list,
+  because it is the one open question that degrades data already being collected rather than
+  waiting harmlessly. It is not urgent in the sense of hours: at zero responses nothing is
+  wrong yet, and the seeding push naturally puts the right native speakers in front of the
+  question country by country. It is urgent in the sense that the review has to keep pace with
+  the first responses from each country, not trail them. Switzerland is deliberately absent
+  (three working languages; picking one misleads the other two), as are BG, EE, HR, HU, LT, LV,
+  RS, SI, SK and UA.
 - Do we publish year-over-year, and how do we handle the same person answering twice?
 - Verification: an unverifiable survey is gameable. Optional payslip verification would give a
   "verified" subset — but it collides hard with anonymity. Probably v2, probably no.
