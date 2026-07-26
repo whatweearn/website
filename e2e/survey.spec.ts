@@ -514,6 +514,7 @@ test.describe("the confirmation screen", () => {
     }
   });
 
+
   test("keeps the deletion caveat, but not as the headline", async ({ page }) => {
     await submitFrom(page, "ES");
     const heading = await page.getByRole("heading", { name: /That.s in/ }).textContent();
@@ -648,6 +649,59 @@ test.describe("when the browser check cannot run", () => {
 
     // One id, not one per answer given.
     expect(await widgetIds()).toHaveLength(1);
+  });
+});
+
+test.describe("the share card's two actions", () => {
+  // Exercised through the landing page's card rather than the confirmation
+  // screen's. They are the same component, and the survey funnel already sits
+  // at the five-submissions-per-hour rate limit — a test that needs no
+  // submission should not spend one.
+  const cancels = {
+    name: "the visitor backs out of the sheet",
+    script: () => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: () => Promise.reject(new DOMException("cancelled", "AbortError")),
+      });
+    },
+  };
+
+  test("cancelling the native share sheet does nothing at all", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.addInitScript(cancels.script);
+    await page.goto("/");
+    await page.evaluate(() => navigator.clipboard.writeText("untouched"));
+
+    const share = page.getByRole("region", { name: /send it to someone/i });
+    await share.getByRole("button", { name: "Share it" }).click();
+
+    // Dismissing used to fall through to copying, so backing out put text on
+    // the clipboard and announced "Copied" — an action nobody asked for,
+    // reported as a success.
+    await expect(share.getByRole("button", { name: "Copied" })).toHaveCount(0);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe("untouched");
+  });
+
+  test("names what each button does, with no 'instead'", async ({ page, context }) => {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page.addInitScript(cancels.script);
+    await page.goto("/");
+    const share = page.getByRole("region", { name: /send it to someone/i });
+
+    await share.getByRole("button", { name: "Copy the message" }).click();
+    await expect(share.getByRole("button", { name: "Copied" })).toBeVisible();
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/whatweearn/);
+    // The share button must not narrate a copy it did not perform.
+    await expect(share.getByRole("button", { name: "Share it" })).toBeVisible();
+  });
+
+  test("copy is the only action where no share sheet exists", async ({ page }) => {
+    // Desktop browsers with no navigator.share: one button, still named.
+    await page.goto("/");
+    const share = page.getByRole("region", { name: /send it to someone/i });
+    await expect(share.getByRole("button", { name: "Copy the message" })).toBeVisible();
+    await expect(share.getByRole("button", { name: "Share it" })).toHaveCount(0);
   });
 });
 

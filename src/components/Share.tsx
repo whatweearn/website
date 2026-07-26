@@ -161,16 +161,17 @@ export function Share({
 
   const payload = `${message} ${url}`;
 
-  async function primary() {
-    if (canUseSheet) {
-      try {
-        await navigator.share({ title: "whatweearn", text: message, url });
-        return;
-      } catch {
-        // Dismissed, or refused. Copying is still useful, so fall through.
-      }
+  async function share() {
+    try {
+      await navigator.share({ title: "whatweearn", text: message, url });
+    } catch (error) {
+      // Backing out of the sheet must do nothing. This used to fall through to
+      // copying, so cancelling a share silently put text on the clipboard and
+      // announced "Copied" — an action nobody asked for, reported as success.
+      // Only a real failure to open the sheet is worth a fallback.
+      if ((error as Error)?.name === "AbortError") return;
+      await copy();
     }
-    await copy();
   }
 
   async function copy() {
@@ -216,18 +217,31 @@ export function Share({
         {message} <span className="text-accent">{url}</span>
       </p>
 
-      {/* Both take their tokens from `buttonClasses`, at one size, so they
-          share a height instead of being sized by hand and drifting apart. */}
-      <div className="mt-5 flex flex-wrap items-center gap-3">
-        <button type="button" onClick={primary} className={buttonClasses("coral", size)}>
-          {copied ? "Copied, go paste it" : canUseSheet ? "Share it" : "Copy the message"}
-        </button>
+      {/*
+        There is always exactly one copy button, and it always says what it
+        does. It used to be labelled "Copy instead", which raised the question
+        "instead of what", and the button beside it changed to "Copied, go
+        paste it" even when the copy had come from the other one.
 
+        The only thing that varies is whether a native share sheet exists to
+        put in front of it. Where it does, it takes the filled treatment and
+        copy steps back to a ghost; where it does not, copy is the whole
+        action and takes the filled one. Both take their tokens from
+        `buttonClasses` at one size, so they share a height.
+      */}
+      <div className="mt-5 flex flex-wrap items-center gap-3">
         {canUseSheet && (
-          <button type="button" onClick={copy} className={buttonClasses("ghost", size)}>
-            {copied ? "Copied" : "Copy instead"}
+          <button type="button" onClick={share} className={buttonClasses("coral", size)}>
+            Share it
           </button>
         )}
+        <button
+          type="button"
+          onClick={copy}
+          className={buttonClasses(canUseSheet ? "ghost" : "coral", size)}
+        >
+          {copied ? "Copied" : "Copy the message"}
+        </button>
       </div>
 
       <p aria-live="polite" className="mt-2 min-h-4 text-2xs text-ink-3">
