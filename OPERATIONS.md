@@ -44,9 +44,12 @@ without the first two rather than falling back to development values.
   Vercel does not read that file. Rotating `IDENTITY_SECRET` costs one day of
   duplicate detection; rotating `SUBSCRIBER_TOKEN_SECRET` invalidates every
   unsubscribe link already in someone's inbox, so treat that one as permanent.
-- [x] `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — issued 2026-07-25.
-      **Rotate the secret before launch:** it was pasted into a chat transcript, which is a
-      copy nobody controls. Rotation in the Cloudflare dashboard takes seconds.
+- [x] `TURNSTILE_SECRET_KEY` / `NEXT_PUBLIC_TURNSTILE_SITE_KEY` — issued 2026-07-25,
+      **secret rotated 2026-07-26** because the original had been pasted into a chat
+      transcript, which is a copy nobody controls. Verified after rotating by posting a
+      dummy token to Cloudflare's siteverify: a good secret answers
+      `invalid-input-response`, a bad one answers `invalid-input-secret`, which tells the
+      two apart without needing a browser.
       Add `localhost` to the key's allowed hostnames if you want the widget to solve during
       local development; without it the survey correctly shows the "could not check your
       browser" path, which is worth seeing once anyway.
@@ -182,6 +185,35 @@ pnpm aggregate                # should report 1 response, 0 published
 - [ ] Licence confirmed: MIT for code, CC BY 4.0 for data.
 
 ---
+
+### 1b-bis. Credential rotation — 2026-07-26
+
+Both Neon passwords and the Turnstile secret were rotated on 2026-07-26.
+
+The responses password had to be: a malformed `DATABASE_URL` reached production,
+`new URL()` threw `ERR_INVALID_URL`, and Node puts the offending input in that
+error — so the connection string, password included, was written to Vercel's log
+store. See `src/lib/connectionString.ts`, which now validates before the string
+reaches a driver and never repeats the value in anything it throws.
+
+The subscriber password did not demonstrably leak, and was rotated anyway. The
+reasoning is worth keeping: the subscribe form is on `/data` as well as the
+confirmation screen, so it was reachable during the window when that credential
+was also malformed, and the evidence that nothing hit it rests on log retention
+rather than on anything structural. For the database that *is* the anonymity
+boundary, a two-minute rotation beats a probabilistic argument.
+
+After any rotation, in order:
+
+```
+pnpm verify:separation                     # still two instances, not one twice
+pnpm dlx tsx scripts/vercel-env.ts         # copy to Vercel
+pnpm dlx vercel deploy --prod
+```
+
+`verify:separation` matters most here. A copy-paste during a hurried rotation is
+all it takes to point both variables at one database, and every test would still
+pass while the site kept promising the two can never be joined.
 
 ### 1c. Vercel
 
