@@ -48,7 +48,6 @@ export function Nav() {
           >
             The data
           </Link>
-          <ThemeToggle />
           <Button href="/survey" variant="ink" size="sm">
             {/* WCAG 2.2 reflow: at 320px the full label pushes the nav past
                 the viewport. Same destination, fewer words. */}
@@ -503,20 +502,27 @@ export function SiteFooter() {
     <Container>
       <footer className="mt-[clamp(3rem,6vw,4.5rem)] flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-line py-8 text-xs text-ink-3">
         <span>whatweearn — open salary data for European engineers. CC BY 4.0.</span>
-        <nav className="flex flex-wrap gap-6">
-          <a href="/methodology" className="no-underline hover:text-ink">
-            Methodology
-          </a>
-          <a href="/source" className="no-underline hover:text-ink">
-            Source
-          </a>
-          <a href="/privacy" className="no-underline hover:text-ink">
-            Privacy
-          </a>
-          <a href="/imprint" className="no-underline hover:text-ink">
-            Imprint
-          </a>
-        </nav>
+        {/* The theme control sits with the site's other housekeeping rather
+            than in the nav, where it was competing for attention with the only
+            action on the page. Grouped with the links so the footer stays two
+            justified blocks instead of three drifting apart. */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
+          <nav className="flex flex-wrap gap-6">
+            <a href="/methodology" className="no-underline hover:text-ink">
+              Methodology
+            </a>
+            <a href="/source" className="no-underline hover:text-ink">
+              Source
+            </a>
+            <a href="/privacy" className="no-underline hover:text-ink">
+              Privacy
+            </a>
+            <a href="/imprint" className="no-underline hover:text-ink">
+              Imprint
+            </a>
+          </nav>
+          <ThemeToggle />
+        </div>
       </footer>
     </Container>
   );
