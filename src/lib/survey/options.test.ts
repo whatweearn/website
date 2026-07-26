@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CITIES,
   CONTRACT_LOCAL_TERMS,
   CONTRACT_TYPES,
   COUNTRIES,
+  ELSEWHERE,
+  citiesFor,
   contractTypesFor,
   valuesOf,
   type ContractType,
@@ -16,6 +19,43 @@ const GENERIC = Object.fromEntries(CONTRACT_TYPES.map((c) => [c.value, c.hint]))
 >;
 
 const LOCALISED = Object.keys(CONTRACT_LOCAL_TERMS) as CountryCode[];
+
+describe("citiesFor", () => {
+  /**
+   * The type already makes this a build error rather than a test failure. It
+   * is asserted anyway because the failure it prevents is not a crash: a
+   * country with no hubs renders a select whose only option is "Elsewhere",
+   * under a hint asking the respondent to pick the nearest one. That reads as
+   * a broken form on the first screen of the survey, which is the worst place
+   * to spend someone's confidence.
+   */
+  it("offers at least the capital for every country the survey accepts", () => {
+    for (const country of COUNTRIES) {
+      const cities = citiesFor(country.code);
+      expect(cities.length, `${country.name} has no hub`).toBeGreaterThan(1);
+    }
+  });
+
+  it("always ends on the catch-all, so no country is a closed list", () => {
+    for (const country of COUNTRIES) {
+      expect(citiesFor(country.code).at(-1)).toBe(ELSEWHERE);
+    }
+  });
+
+  it("lists no city twice within a country", () => {
+    for (const country of COUNTRIES) {
+      const cities = citiesFor(country.code);
+      expect(new Set(cities).size, `${country.name} repeats a city`).toBe(cities.length);
+    }
+  });
+
+  it("names hubs only for countries the survey offers", () => {
+    const offered = new Set(COUNTRIES.map((c) => c.code));
+    for (const code of Object.keys(CITIES)) {
+      expect(offered.has(code as CountryCode), `${code} is not in COUNTRIES`).toBe(true);
+    }
+  });
+});
 
 describe("contractTypesFor", () => {
   /**

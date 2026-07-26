@@ -49,32 +49,56 @@ export const COUNTRY_CODES = COUNTRIES.map((c) => c.code) as unknown as [
  * Major hubs only. City drives enormous variance (Munich vs Leipzig), but a
  * long tail of small towns would make cells too thin to publish, so anything
  * else collapses into one bucket.
+ *
+ * Every country carries at least its capital, and the type enforces both
+ * halves of that: `Record` rather than `Partial<Record>` means a country added
+ * to {@link COUNTRIES} without cities fails the build, and the non-empty tuple
+ * means an empty array does too. Eleven countries previously had no entry at
+ * all, which left the respondent a select whose only option was "Elsewhere" —
+ * elsewhere than what? — under a hint telling them to pick the nearest.
+ *
+ * Adding hubs costs nothing in disclosure: city is never aggregated into a
+ * published cut, and `microdata.ts` drops it from the released dataset
+ * outright as the most identifying field held.
  */
-export const CITIES: Partial<Record<CountryCode, readonly string[]>> = {
+export const CITIES: Record<CountryCode, readonly [string, ...string[]]> = {
   AT: ["Vienna", "Graz", "Linz"],
   BE: ["Brussels", "Antwerp", "Ghent"],
+  BG: ["Sofia", "Plovdiv", "Varna"],
   CH: ["Zurich", "Geneva", "Basel", "Lausanne", "Bern", "Zug"],
   CZ: ["Prague", "Brno", "Ostrava"],
   DE: ["Berlin", "Munich", "Hamburg", "Frankfurt", "Cologne", "Stuttgart", "Düsseldorf", "Leipzig"],
   DK: ["Copenhagen", "Aarhus"],
+  EE: ["Tallinn", "Tartu"],
   ES: ["Madrid", "Barcelona", "Valencia", "Seville", "Málaga", "Bilbao"],
   FI: ["Helsinki", "Tampere", "Turku"],
   FR: ["Paris", "Lyon", "Toulouse", "Bordeaux", "Nantes", "Lille", "Marseille"],
+  GR: ["Athens", "Thessaloniki"],
+  HR: ["Zagreb", "Split", "Rijeka"],
+  HU: ["Budapest", "Debrecen", "Szeged"],
   IE: ["Dublin", "Cork", "Galway"],
   IT: ["Milan", "Rome", "Turin", "Bologna", "Naples"],
+  LT: ["Vilnius", "Kaunas"],
+  // Riga alone: Latvian software employment is concentrated there to a degree
+  // that a second entry would be a cell that never clears MIN_CELL_SIZE.
+  LV: ["Riga"],
   NL: ["Amsterdam", "Rotterdam", "Utrecht", "The Hague", "Eindhoven"],
   NO: ["Oslo", "Bergen", "Trondheim"],
   PL: ["Warsaw", "Kraków", "Wrocław", "Poznań", "Gdańsk", "Katowice", "Łódź"],
   PT: ["Lisbon", "Porto", "Braga"],
   RO: ["Bucharest", "Cluj-Napoca", "Timișoara", "Iași"],
+  RS: ["Belgrade", "Novi Sad", "Niš"],
   SE: ["Stockholm", "Gothenburg", "Malmö"],
+  SI: ["Ljubljana", "Maribor"],
+  SK: ["Bratislava", "Košice"],
+  UA: ["Kyiv", "Lviv", "Kharkiv", "Dnipro"],
   UK: ["London", "Manchester", "Edinburgh", "Cambridge", "Bristol", "Glasgow", "Leeds", "Birmingham"],
 };
 
 export const ELSEWHERE = "Elsewhere" as const;
 
 export function citiesFor(country: CountryCode): readonly string[] {
-  return [...(CITIES[country] ?? []), ELSEWHERE];
+  return [...CITIES[country], ELSEWHERE];
 }
 
 export const WORK_SETUPS = [

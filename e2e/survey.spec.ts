@@ -29,6 +29,32 @@ async function answerRequired(page: Page) {
   await page.getByRole("spinbutton").first().fill("78000");
 }
 
+test.describe("city on the first screen", () => {
+  /**
+   * Eleven countries once had no hubs recorded, so the select offered exactly
+   * one option — "Elsewhere" — beneath a hint asking the respondent to pick the
+   * nearest. A form that visibly does not work, on the first screen, before
+   * anyone has invested anything in finishing it.
+   */
+  test("offers real hubs for a country that once had none", async ({ page }) => {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("GR");
+
+    const city = page.getByLabel("City");
+    await expect(city.getByRole("option", { name: "Athens" })).toBeAttached();
+    await expect(city.getByRole("option", { name: "Thessaloniki" })).toBeAttached();
+  });
+
+  test("never leaves the catch-all as the only choice", async ({ page }) => {
+    await page.goto("/survey");
+    for (const code of ["LV", "SI", "UA", "EE"]) {
+      await page.getByLabel("Country").selectOption(code);
+      const options = page.getByLabel("City").getByRole("option");
+      expect(await options.count(), `${code} offers only the catch-all`).toBeGreaterThan(1);
+    }
+  });
+});
+
 test.describe("contract type in local terms", () => {
   /**
    * The categories are generic; the boundary that decides whether a response
