@@ -366,11 +366,18 @@ The accessibility audit found real defects, not cosmetic ones:
   hidden because the hero button sits on `hero-glow`: axe cannot resolve a gradient to one
   background colour, so it files the result as **incomplete** rather than a violation, and
   every scan here asserts only `violations`. Putting the same button on a flat surface
-  failed instantly. Weight now lives on `SIZES` in `ui.tsx`, not the base — two competing
-  `font-*` weight utilities on one element resolve by emission order, not class order, so
-  a variant adding `font-bold` over a `font-semibold` base silently loses. **Treat axe
-  `incomplete` as unreviewed, not as passing**, and re-check any token you have only ever
-  seen against a gradient.
+  failed instantly. **Treat axe `incomplete` as unreviewed, not as passing**, and re-check
+  any token you have only ever seen against a gradient.
+
+  Fixed by deleting the `coralLarge` variant rather than by forcing `font-bold`: every
+  filled button is now `--wwe-accent` at 5.08:1, so size and weight are ordinary design
+  choices again instead of load-bearing contrast machinery. That restores what §10 and
+  `globals.css` both already said — **coral is decorative (bars, marks, washes), accent
+  carries interactive text and fills.** No filled control uses the decorative token now;
+  keep it that way. Weight still lives on `SIZES` in `ui.tsx` rather than `BUTTON_BASE`,
+  because two competing `font-*` weight utilities on one element resolve by emission order
+  and not class order, so a variant adding `font-bold` over a `font-semibold` base loses
+  silently.
 
 The CSP is the "no third-party scripts" promise made enforceable: Cloudflare Turnstile is the
 only external origin allowed anywhere, so an analytics snippet added later gets blocked rather

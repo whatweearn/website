@@ -205,16 +205,14 @@ export function Share({
           onClick={primary}
           className={cx(
             "inline-flex cursor-pointer items-center gap-2 rounded-full",
-            "font-display whitespace-nowrap text-on-accent",
-            "transition-[background-color,box-shadow,transform] duration-200",
-            "hover:-translate-y-px hover:shadow-md",
-            // Bold on the coral one is a contrast requirement, not a style
-            // choice, and the weight is set alongside the size for the reason
-            // given on SIZES in ui.tsx. Same pairings as a real Button, which
+            "font-display font-semibold whitespace-nowrap text-on-accent",
+            "bg-accent transition-[background-color,box-shadow,transform] duration-200",
+            "hover:-translate-y-px hover:bg-accent-hover hover:shadow-md",
+            // Deliberately the same tokens a real Button would apply, which
             // this cannot be: Button renders a Link, and this runs an action.
             prominent
-              ? "bg-coral px-[2.1rem] py-[1.15rem] text-lg font-bold hover:bg-accent"
-              : "bg-accent px-[1.65rem] py-4 text-base font-semibold hover:bg-accent-hover",
+              ? "px-[2.1rem] py-[1.15rem] text-lg"
+              : "px-[1.65rem] py-4 text-base",
           )}
         >
           {copied ? "Copied, go paste it" : canUseSheet ? "Share it" : "Copy the message"}

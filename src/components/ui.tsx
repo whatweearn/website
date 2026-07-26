@@ -35,30 +35,33 @@ const BUTTON_BASE =
 const SIZES = {
   sm: "px-[1.2rem] py-[0.68rem] text-xs font-semibold",
   base: "px-[1.65rem] py-4 text-base font-semibold",
-  lg: "px-[2.1rem] py-[1.15rem] text-lg font-bold",
+  lg: "px-[2.1rem] py-[1.15rem] text-lg font-semibold",
 } as const;
 
 /**
- * Coral is reserved for the two conversion moments (hero and dock). Large
- * buttons take the brighter coral because they clear AA at 3:1; small ones
- * keep the deeper accent, which they need for 4.5:1.
+ * One filled coral, at every size, and it is `--wwe-accent`.
  *
- * The `font-bold` on `SIZES.lg` is what makes that true, and it is load-bearing
- * rather than styling. White on `--wwe-coral` is 3.38:1, which is only enough
- * under WCAG's large-text rule, and that rule needs 18.66px *bold* or 24px at
- * any weight. `text-lg` resolves to 19.3px, so at the semibold 600 this used to
- * carry it was not large text at all and the real requirement was 4.5:1 — a
- * failure since the palette was solved.
+ * Large buttons used to take the brighter `--wwe-coral` on the reasoning that
+ * they cleared AA at 3:1. They did not. White on `--wwe-coral` is 3.38:1,
+ * which only passes under WCAG's large-text rule, and that rule wants 18.66px
+ * **bold** or 24px at any weight — `text-lg` is 19.3px, so at semibold it was
+ * never large text and the real bar was 4.5:1. It had been failing since the
+ * palette was solved, and it stayed invisible because the hero button sits on
+ * `hero-glow`: axe cannot resolve a gradient to one background colour, files
+ * the result as *incomplete* rather than a violation, and every scan here
+ * asserts only violations. Putting the same button on the share card's flat
+ * surface failed instantly.
  *
- * It went unseen because the hero button sits on `hero-glow`, a gradient axe
- * cannot resolve to a single background colour, so it was reported as
- * "incomplete" rather than a violation and the suite only asserts violations.
- * The share card put the same button on a flat surface and it failed at once.
- * Do not drop the large weight below 700 without re-solving the token.
+ * Bolting the weight to 700 would have propped it up. Moving to `--wwe-accent`
+ * removes the dependency instead: 5.08:1, so size and weight are free design
+ * choices again, and it restores what `globals.css` has always claimed — coral
+ * is decorative (bars, marks, washes), accent carries interactive fills. There
+ * is now no filled control anywhere using the decorative token.
+ *
+ * Treat axe `incomplete` as unreviewed, not as passing.
  */
 const VARIANTS = {
   coral: "bg-accent text-on-accent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
-  coralLarge: "bg-coral text-on-accent shadow-sm hover:bg-accent hover:shadow-md hover:-translate-y-px",
   ink: "bg-ink text-on-ink shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
   ghost: "bg-transparent text-ink border border-line-2 hover:bg-tint hover:border-ink-3",
 } as const;
@@ -82,12 +85,11 @@ export function Button({
   className,
   id,
 }: ButtonProps) {
-  const resolved = variant === "coral" && size === "lg" ? "coralLarge" : variant;
   return (
     <Link
       id={id}
       href={href}
-      className={cx(BUTTON_BASE, SIZES[size], VARIANTS[resolved], className)}
+      className={cx(BUTTON_BASE, SIZES[size], VARIANTS[variant], className)}
     >
       {children}
       {arrow && (
