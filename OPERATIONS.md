@@ -215,6 +215,25 @@ pnpm dlx vercel deploy --prod
 all it takes to point both variables at one database, and every test would still
 pass while the site kept promising the two can never be joined.
 
+### 1b-ter. Test data purged before launch — 2026-07-26
+
+The responses table held four rows from development, deleted on 2026-07-26
+before any announcement. Two were byte-identical German rows (senior,
+permanent, EUR 78,000, every optional field null); the others exercised the
+day-rate feature, one of them as a permanent employee reporting a day rate,
+which is not a combination a real respondent produces.
+
+Deleted rather than marked with `excluded_reason`, because nothing had been
+published or announced and launch is the natural zero point. Carrying four
+permanently-excluded rows would have meant explaining test data in a public
+anomaly log, where it reads as though real people were removed. Nothing was
+written to `anomaly_log` for the same reason: that log is for exclusions from a
+live dataset, and this predates one.
+
+The subscriber list keeps its single confirmed row. It is a genuine completed
+double opt-in belonging to the operator, it affects no published figure, and it
+is a useful canary for the first real send.
+
 ### 1c. Vercel
 
 The repo is public, so Hobby can deploy it from the org. Note that Vercel's
