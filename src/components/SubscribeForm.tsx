@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { cx } from "./ui";
+import { SHELL, cx } from "./ui";
 
 /**
  * The optional email.
@@ -85,7 +85,7 @@ export function SubscribeForm() {
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           autoComplete="email"
-          className="w-full max-w-xs rounded-md border border-line bg-surface px-4 py-3 text-base text-ink transition-colors hover:border-line-2"
+          className={cx(SHELL, "w-full max-w-xs px-4 py-3 text-base text-ink")}
         />
         <button
           type="submit"

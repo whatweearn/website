@@ -247,6 +247,7 @@ export function SurveyWizard({
                 { value: "yes", label: "Yes" },
                 { value: "no", label: "No" },
               ]}
+              compact
             />
         </>
       ),
@@ -335,6 +336,7 @@ export function SurveyWizard({
         <>
           <MoneyField
             name="baseSalary"
+            label="Base salary, gross"
             value={draft.baseSalary as number}
             onChange={(v) => set("baseSalary", v)}
             currency={currency}
@@ -370,6 +372,7 @@ export function SurveyWizard({
               value={draft.paymentsPerYear ? String(draft.paymentsPerYear) : undefined}
               onChange={(v) => set("paymentsPerYear", Number(v))}
               options={PAYMENTS_PER_YEAR.map((p) => ({ value: String(p), label: String(p) }))}
+              compact
             />
           )}
 
@@ -425,6 +428,7 @@ export function SurveyWizard({
       body: (
         <MoneyField
           name="bonus"
+          label="Bonus paid in the last twelve months"
           value={draft.bonus as number}
           onChange={(v) => set("bonus", v)}
           currency={currency}
@@ -440,6 +444,7 @@ export function SurveyWizard({
         <>
           <MoneyField
             name="equityAnnual"
+            label="Annualised equity value"
             value={draft.equityAnnual as number}
             onChange={(v) => set("equityAnnual", v)}
             currency={currency}
@@ -452,6 +457,7 @@ export function SurveyWizard({
               value={draft.companyStage as string}
               onChange={(v) => set("companyStage", v)}
               options={COMPANY_STAGES}
+              compact
             />
         </>
       ),
@@ -468,6 +474,7 @@ export function SurveyWizard({
               value={draft.companySize as string}
               onChange={(v) => set("companySize", v)}
               options={COMPANY_SIZES}
+              compact
             />
           <Field label="Industry" htmlFor="industry">
             <Select

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import { cx } from "../ui";
+import { SELECT_CONTROL, SHELL, cx } from "../ui";
 
 /**
  * Label plus optional hint for a single control.
@@ -53,6 +53,10 @@ type Option = { value: string; label: string; hint?: string };
  * Native radios under the hood — arrow-key navigation, form semantics and
  * screen-reader grouping all come free, and a div-based version would have to
  * reimplement them badly.
+ *
+ * `compact` sizes the cards to their content instead of the column. A card
+ * holding "12" or "Yes" stretched to the full width reads as an empty slab
+ * rather than a choice; one holding a label and a description earns it.
  */
 export function Choice({
   name,
@@ -62,6 +66,7 @@ export function Choice({
   onChange,
   options,
   columns = false,
+  compact = false,
   hideLabel = false,
 }: {
   name: string;
@@ -71,6 +76,7 @@ export function Choice({
   onChange: (value: string) => void;
   options: readonly Option[];
   columns?: boolean;
+  compact?: boolean;
   hideLabel?: boolean;
 }) {
   return (
@@ -79,7 +85,12 @@ export function Choice({
         {label}
       </legend>
       {hint && !hideLabel && <p className="mb-2 max-w-[52ch] text-xs text-ink-3">{hint}</p>}
-      <div className={cx("grid gap-2", columns && "sm:grid-cols-2")}>
+      <div
+        className={cx(
+          "gap-2",
+          compact ? "flex flex-wrap" : cx("grid", columns && "sm:grid-cols-2"),
+        )}
+      >
       {options.map((option) => {
         const id = `${name}-${option.value}`;
         const selected = value === option.value;
@@ -88,9 +99,16 @@ export function Choice({
             key={option.value}
             htmlFor={id}
             className={cx(
-              "flex cursor-pointer items-start gap-3 rounded-md border px-4 py-3 transition-colors",
+              "flex cursor-pointer rounded-md border px-4 py-3 transition-colors",
+              compact ? "items-center gap-2.5" : "items-start gap-3",
+              // The focus ring belongs on the card, not on the 16px radio
+              // inside it. Keyboard users were being shown a dot while the
+              // thing they were choosing gave no signal at all.
+              "has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-coral",
+              // A 1px border alone is a weak scan target in a stack of eight.
+              // The ring doubles the edge without moving anything.
               selected
-                ? "border-coral bg-wash"
+                ? "border-coral bg-wash ring-1 ring-coral hover:border-accent hover:ring-accent"
                 : "border-line bg-surface hover:border-line-2 hover:bg-tint",
             )}
           >
@@ -101,7 +119,9 @@ export function Choice({
               value={option.value}
               checked={selected}
               onChange={() => onChange(option.value)}
-              className="mt-1 size-4 shrink-0 accent-[var(--wwe-coral)]"
+              // Outline suppressed only because the card above draws a larger
+              // one in its place — never removed outright.
+              className={cx("comp-radio focus-visible:outline-none", !compact && "mt-0.5")}
             />
             <span className="flex flex-col gap-0.5">
               <span className="text-sm font-medium text-ink">{option.label}</span>
@@ -127,20 +147,22 @@ export function Select({
   options: readonly Option[];
 }) {
   return (
-    <select
-      id={name}
-      name={name}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full max-w-sm rounded-md border border-line bg-surface px-4 py-3 text-base text-ink transition-colors hover:border-line-2"
-    >
-      <option value="">Choose…</option>
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    <span className="comp-select block w-full max-w-sm">
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cx(SELECT_CONTROL, "w-full")}
+      >
+        <option value="">Choose…</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </span>
   );
 }
 
@@ -160,7 +182,10 @@ export function NumberField({
   suffix?: string;
 }) {
   return (
-    <span className="inline-flex items-center gap-3">
+    // The unit is part of the answer, so it sits inside the control for the
+    // same reason the currency does — "100" floating next to loose grey text
+    // reads as two things rather than one.
+    <span className={cx(SHELL, "inline-flex w-fit max-w-full items-stretch")}>
       <input
         id={name}
         name={name}
@@ -170,9 +195,16 @@ export function NumberField({
         max={max}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-        className="figure-num w-32 rounded-md border border-line bg-surface px-4 py-3 text-base text-ink transition-colors hover:border-line-2"
+        className={cx(
+          "figure-num comp-number w-28 bg-transparent px-4 py-3 text-base text-ink",
+          suffix ? "rounded-l-md" : "rounded-md",
+        )}
       />
-      {suffix && <span className="text-xs text-ink-3">{suffix}</span>}
+      {suffix && (
+        <span className="flex items-center rounded-r-md border-l border-line px-4 py-3 text-xs text-ink-3">
+          {suffix}
+        </span>
+      )}
     </span>
   );
 }
@@ -185,6 +217,7 @@ export function NumberField({
  */
 export function MoneyField({
   name,
+  label,
   value,
   onChange,
   currency,
@@ -195,6 +228,14 @@ export function MoneyField({
   periods,
 }: {
   name: string;
+  /**
+   * The amount's accessible name. Required, and not optional by accident: this
+   * field's only name used to be its `placeholder="0"`, which axe accepts and
+   * which quietly disappeared the moment the placeholder was dropped for
+   * looking like a real value. A screen reader now hears the question rather
+   * than "edit text".
+   */
+  label: string;
   value?: number;
   onChange: (value: number | undefined) => void;
   currency: string;
@@ -206,7 +247,21 @@ export function MoneyField({
   periods?: readonly { value: string; label: string }[];
 }) {
   return (
-    <span className="inline-flex flex-wrap items-center gap-3">
+    // One bordered unit rather than three loose boxes: "5200 EUR a month" is a
+    // single answer, and three controls at three type sizes read as three
+    // unrelated widgets.
+    //
+    // It stacks below `sm` rather than wrapping. Wrapping left the segment
+    // dividers stranded in whitespace at the end of each row; stacking turns
+    // them into full-width rules, which is what a narrow screen wants anyway.
+    // `w-fit` stops the surrounding flex column stretching the group and
+    // undoing the point of grouping it.
+    <span className={cx(SHELL, "grid w-fit max-w-full sm:flex sm:items-stretch")}>
+      {/* Absolutely positioned by `sr-only`, so it is out of flow and adds no
+          row to the group. */}
+      <label htmlFor={name} className="sr-only">
+        {label}
+      </label>
       <input
         id={name}
         name={name}
@@ -214,44 +269,99 @@ export function MoneyField({
         inputMode="numeric"
         min={0}
         step={100}
-        placeholder="0"
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? undefined : Number(e.target.value))}
-        className="figure-num w-48 rounded-md border border-line bg-surface px-4 py-3 text-lg text-ink transition-colors hover:border-line-2"
+        className={cx(
+          "figure-num comp-number bg-transparent px-4 py-3 text-lg text-ink",
+          "w-full rounded-t-md sm:w-40 sm:rounded-t-none sm:rounded-l-md",
+        )}
       />
+
       {onCurrencyChange ? (
-        <select
-          aria-label="Currency"
+        <Segment
+          label="Currency"
           value={currency}
-          onChange={(e) => onCurrencyChange(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-3 text-base text-ink transition-colors hover:border-line-2"
-        >
-          {currencies.map((code) => (
-            <option key={code} value={code}>
-              {code}
-            </option>
-          ))}
-        </select>
+          onChange={onCurrencyChange}
+          options={currencies.map((code) => ({ value: code, label: code }))}
+        />
       ) : (
-        <span className="text-xs text-ink-3">{currency}</span>
+        <Note>{currency}</Note>
       )}
 
       {periods && onPeriodChange ? (
-        <select
-          aria-label="Pay period"
-          value={period}
-          onChange={(e) => onPeriodChange(e.target.value)}
-          className="rounded-md border border-line bg-surface px-3 py-3 text-base text-ink transition-colors hover:border-line-2"
-        >
-          {periods.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
+        <Segment
+          label="Pay period"
+          value={period ?? ""}
+          onChange={onPeriodChange}
+          options={periods}
+          last
+        />
       ) : (
-        <span className="text-xs text-ink-3">gross, per year</span>
+        <Note last>gross, per year</Note>
       )}
+    </span>
+  );
+}
+
+/**
+ * Divides one segment from the next: a rule above it when stacked, a rule
+ * beside it when the group is laid out in a row.
+ */
+const SEGMENT_EDGE = "border-t border-line sm:border-t-0 sm:border-l";
+
+function segmentRadius(last: boolean): string {
+  return last ? "rounded-b-md sm:rounded-b-none sm:rounded-r-md" : "";
+}
+
+/** A select that lives inside the money group, so it carries no border of its own. */
+function Segment({
+  label,
+  value,
+  onChange,
+  options,
+  last = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly { value: string; label: string }[];
+  last?: boolean;
+}) {
+  const round = segmentRadius(last);
+  return (
+    // `grid` so the select stretches to the segment when stacked, which keeps
+    // the chevron pinned to the right edge rather than floating mid-row.
+    <span className={cx("comp-select grid", SEGMENT_EDGE, round)}>
+      <select
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cx(
+          "cursor-pointer appearance-none bg-transparent py-3 pr-9 pl-4 text-base text-ink",
+          round,
+        )}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
+
+/** The fixed half of the group — a currency or period the survey already knows. */
+function Note({ children, last = false }: { children: ReactNode; last?: boolean }) {
+  return (
+    <span
+      className={cx(
+        "flex items-center px-4 py-3 text-xs text-ink-3",
+        SEGMENT_EDGE,
+        segmentRadius(last),
+      )}
+    >
+      {children}
     </span>
   );
 }

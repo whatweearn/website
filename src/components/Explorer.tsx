@@ -8,7 +8,7 @@ import { COUNTRIES, LEVELS } from "@/lib/survey/options";
 import { COUNTRY_PUBLISH_MIN, responsesUntilPublish } from "@/lib/thresholds";
 
 import { DistributionCard } from "./DistributionCard";
-import { Button } from "./ui";
+import { Button, SELECT_CONTROL, cx } from "./ui";
 
 const ANY = "*";
 
@@ -27,36 +27,43 @@ export function Explorer({ stats }: { stats: SiteStats }) {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end gap-4">
+        {/* The label wraps the select, so the control is named implicitly.
+            The span sits inside that wrapping so `.comp-select` positions its
+            chevron against the select rather than the label's text above it. */}
         <label className="flex flex-col gap-2 text-xs font-semibold text-ink">
           Country
-          <select
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            className="rounded-md border border-line bg-surface px-4 py-3 text-base font-normal text-ink transition-colors hover:border-line-2"
-          >
-            <option value={ANY}>All of Europe</option>
-            {COUNTRIES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <span className="comp-select inline-block">
+            <select
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className={cx(SELECT_CONTROL, "w-full font-normal")}
+            >
+              <option value={ANY}>All of Europe</option>
+              {COUNTRIES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </span>
         </label>
 
         <label className="flex flex-col gap-2 text-xs font-semibold text-ink">
           Level
-          <select
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="rounded-md border border-line bg-surface px-4 py-3 text-base font-normal text-ink transition-colors hover:border-line-2"
-          >
-            <option value={ANY}>All levels</option>
-            {LEVELS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
+          <span className="comp-select inline-block">
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className={cx(SELECT_CONTROL, "w-full font-normal")}
+            >
+              <option value={ANY}>All levels</option>
+              {LEVELS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </span>
         </label>
       </div>
 

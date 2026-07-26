@@ -5,6 +5,21 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }
 
+/**
+ * The bordered shell every input shares. One definition, because the survey
+ * and the explorer drawing the same hairline by hand is exactly how two
+ * slightly different borders end up on one site.
+ */
+export const SHELL =
+  "rounded-md border border-line bg-surface transition-colors hover:border-line-2";
+
+/**
+ * A select with its native chevron removed. Must be paired with a
+ * `.comp-select` wrapper, which draws the replacement — the padding on the
+ * right is the room that chevron sits in.
+ */
+export const SELECT_CONTROL = cx(SHELL, "appearance-none py-3 pr-10 pl-4 text-base text-ink");
+
 const BUTTON_BASE =
   "inline-flex items-center justify-center gap-2 rounded-full font-display font-semibold " +
   "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,transform,border-color,color] " +

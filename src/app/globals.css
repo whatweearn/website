@@ -243,6 +243,88 @@
     letter-spacing: -0.02em;
   }
 
+  /* --- select chevron ---------------------------------------------------- */
+  /* The native disclosure arrow is drawn by the OS at whatever size and
+     position it likes, which is the one place the design system stopped at the
+     browser's edge. `appearance: none` on the select removes it; the wrapper
+     draws the replacement from `currentColor`, so it follows the theme without
+     a colour ever being written here. */
+  .comp-select {
+    position: relative;
+    color: var(--wwe-ink-3);
+  }
+  .comp-select::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    width: 0.44rem;
+    height: 0.44rem;
+    border-right: 1.5px solid currentColor;
+    border-bottom: 1.5px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    pointer-events: none;
+  }
+  .comp-select:hover {
+    color: var(--wwe-ink-2);
+  }
+
+  /* --- radio ------------------------------------------------------------- */
+  /* The select lost its native chevron for looking undesigned next to
+     everything around it. The native radio was the same argument left
+     unfinished: `accent-color` tints the browser's control but cannot size it,
+     weight its ring, or match the hairline the cards are drawn with.
+     `appearance: none` keeps every native semantic — arrow keys, grouping,
+     form submission — and only takes over the painting. */
+  .comp-radio {
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: 1.05rem;
+    height: 1.05rem;
+    border: 1.5px solid var(--wwe-line-2);
+    border-radius: 50%;
+    background-color: var(--wwe-surface);
+    background-repeat: no-repeat;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .comp-radio:hover {
+    border-color: var(--wwe-ink-3);
+  }
+  .comp-radio:checked {
+    border-color: var(--wwe-coral);
+    /* A gradient rather than a pseudo-element: `::before` on a replaced
+       element is not reliably rendered, a background always is. */
+    background-image: radial-gradient(
+      circle at center,
+      var(--wwe-coral) 0 0.26rem,
+      transparent 0.27rem
+    );
+  }
+  /* Windows high contrast paints no backgrounds or borders, so a hand-drawn
+     control vanishes entirely. Hand it back to the OS there. */
+  @media (forced-colors: active) {
+    .comp-radio {
+      appearance: auto;
+    }
+  }
+
+  /* --- number input ------------------------------------------------------ */
+  /* Spin buttons on a salary are meaningless — nobody nudges €52,000 up by one
+     — and they clutter the most important field in the survey. */
+  .comp-number {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+  .comp-number::-webkit-outer-spin-button,
+  .comp-number::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+  }
+
   /* --- range input ------------------------------------------------------ */
   .comp-slider {
     -webkit-appearance: none;
