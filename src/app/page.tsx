@@ -12,13 +12,11 @@ import {
   SurveyPreview,
 } from "@/components/sections";
 import { Container } from "@/components/ui";
-import { countriesNearingPublication, getSiteStats, hasPublishedFigures } from "@/lib/stats";
-import { shareMessageFor } from "@/lib/share";
+import { getSiteStats, hasPublishedFigures } from "@/lib/stats";
 
 export default async function Home() {
   const stats = await getSiteStats();
   const published = hasPublishedFigures(stats);
-  const shareMessage = shareMessageFor(countriesNearingPublication(stats, 1)[0]);
 
   return (
     <>
@@ -84,7 +82,7 @@ export default async function Home() {
         <Payoff published={published} />
         <SurveyPreview />
         <CountryTable stats={stats} />
-        <Closing shareMessage={shareMessage} />
+        <Closing />
       </main>
 
       <SiteFooter />

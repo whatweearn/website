@@ -119,16 +119,16 @@ export function Confirmation({ country }: { country?: string }) {
         blurb={
           progress && !progress.published ? (
             <>
-              There is no budget behind this and nothing is being advertised anywhere. Those{" "}
-              {count(progress.remaining)} responses arrive because people who have already
-              answered send it to people who have not. One team channel or one group chat is
-              genuinely most of the way there.
+              You are not asking anyone for a favour. Everyone you send it to gets the same two
+              minutes and the same answer you just bought yourself, and those{" "}
+              {count(progress.remaining)} responses arrive that way or not at all. One team
+              channel or one group chat is genuinely most of the way there.
             </>
           ) : (
             <>
-              Every extra answer narrows the figures the next person negotiates against. Sending
-              this to one team channel does more for that than anything else you can do in the
-              next thirty seconds.
+              Everyone you send it to gets what you just got, for the same two minutes, and
+              every extra answer narrows the figures all of you negotiate against. One team
+              channel does more for that than anything else in the next thirty seconds.
             </>
           )
         }

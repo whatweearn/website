@@ -8,7 +8,7 @@ import { Share } from "@/components/Share";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { Container } from "@/components/ui";
 import { count } from "@/lib/format";
-import { shareMessageFor } from "@/lib/share";
+import { INVITE_MESSAGE } from "@/lib/share";
 import {
   countriesNearingPublication,
   dayRatesByCountry,
@@ -62,15 +62,20 @@ export default async function DataPage() {
         {/* Placed directly under the progress bars rather than at the foot of
             the page. Somebody who has just read "Germany, 9 of 60" is holding
             the exact fact that makes forwarding this worth doing, and it is
-            gone by the time they reach the CSV. */}
+            gone by the time they reach the CSV.
+
+            The message itself names no country. The bars are context for the
+            visitor standing here; the person receiving the message is not, and
+            telling them how close some other country is to publishing asks
+            them to care about our progress rather than their own pay. */}
         <Share
           className="mt-10"
-          message={shareMessageFor(nearing[0])}
+          message={INVITE_MESSAGE}
           headline={published ? "Make them sharper." : "This is how the bars move."}
           blurb={
             published
-              ? "Every further answer narrows the figures above. Nothing here is advertised anywhere, so the next engineer arrives because somebody sent it to them."
-              : "Nothing here is advertised anywhere and there is no budget behind it. Those bars fill because people send this to other engineers, which is a thirty-second job with a much better return than most."
+              ? "Every further answer narrows the figures above, including for whoever you send it to. Nothing here is advertised anywhere, so the next engineer arrives because somebody sent it to them."
+              : "Those bars fill because people send this to other engineers, and the engineer you send it to gets the same two minutes and the same answer out of it that you would."
           }
         />
 

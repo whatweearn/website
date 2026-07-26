@@ -1,4 +1,5 @@
 import { count } from "@/lib/format";
+import { INVITE_MESSAGE } from "@/lib/share";
 import { type SiteStats, publishableCountries } from "@/lib/stats";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "@/lib/thresholds";
 
@@ -453,7 +454,7 @@ function CountryRowCells({ row }: { row: ReturnType<typeof publishableCountries>
 
 /* --------------------------------------------------------------- close -- */
 
-export function Closing({ shareMessage }: { shareMessage: string }) {
+export function Closing() {
   return (
     <section id="start" className="pb-[clamp(2rem,5vw,3rem)]">
       <Container slim>
@@ -479,13 +480,13 @@ export function Closing({ shareMessage }: { shareMessage: string }) {
         <Reveal>
           <Share
             className="mt-[clamp(1rem,2.5vw,1.5rem)]"
-            message={shareMessage}
+            message={INVITE_MESSAGE}
             headline="Or send it to someone who will."
             blurb={
               <>
-                Nothing is being advertised anywhere and there is no budget behind this. It
-                reaches the next engineer because somebody forwarded it, or it does not reach
-                them at all.
+                You are not asking them for a favour. Whoever you send this to gets the same
+                thing you do, for the same two minutes, and it reaches them because somebody
+                forwarded it or it does not reach them at all.
               </>
             }
           />

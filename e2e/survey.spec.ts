@@ -468,7 +468,9 @@ test.describe("the confirmation screen", () => {
     // bare copy button asks somebody to publish text under their own name
     // sight unseen, which is most of why share buttons go unclicked.
     const share = page.getByRole("region", { name: /decides whether Germany|pass it on/i });
-    await expect(share.getByText(/Germany needs \d+ more before its median publishes/)).toBeVisible();
+    await expect(
+      share.getByText(/Germany needs \d+ more before any of us can see what it really pays/),
+    ).toBeVisible();
 
     // Every channel one click away, and all of them plain links. A share SDK
     // would be both a CSP violation and exactly the tracking this site
@@ -493,9 +495,10 @@ test.describe("the confirmation screen", () => {
 
     await share.getByRole("button", { name: /Copy the message/ }).click();
     const copied = await page.evaluate(() => navigator.clipboard.readText());
-    // "Germany needs N more" makes the reader's action consequential; "I did a
-    // survey" asks for a favour. The link has to travel with it either way.
-    expect(copied).toMatch(/Germany needs \d+ more before its median publishes/);
+    // Addressed to whoever receives it, and offering them the number. Naming a
+    // country they have no stake in, or asking them to help us reach sixty,
+    // are both things nobody forwards. The link has to travel with it too.
+    expect(copied).toMatch(/Germany needs \d+ more before any of us can see what it really pays/);
     expect(copied).toMatch(/https?:\/\//);
 
     // Scanned here rather than in a11y.spec.ts, which would have to complete a

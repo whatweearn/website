@@ -1,40 +1,62 @@
 import { describe, expect, it } from "vitest";
 
-import { GENERAL_MESSAGE, gapMessage, shareMessageFor } from "./share";
-import type { CountryRow } from "./stats";
-import { COUNTRY_PUBLISH_MIN } from "./thresholds";
+import { INVITE_MESSAGE, gapMessage } from "./share";
 
 /**
  * This is the only copy on the site that goes out under someone else's name,
  * on their own timeline, to people who have never heard of us. A message that
- * reads as marketing does not get posted, and a message that overclaims makes
- * the person who posted it look careless. Both failures are silent, so they
- * get asserted here.
+ * reads as marketing does not get posted, and one that overclaims makes the
+ * person who posted it look careless. Both failures are silent, so they get
+ * asserted here.
  */
 
-function country(over: Partial<CountryRow> = {}): CountryRow {
-  return {
-    name: "Germany",
-    currency: "EUR",
-    responses: 9,
-    median: null,
-    p25: null,
-    p75: null,
-    ...over,
-  };
-}
-
-describe("gapMessage", () => {
-  it("names the gap, not the achievement", () => {
-    const message = gapMessage("Germany", 51, false);
-    expect(message).toContain("Germany needs 51 more before its median publishes");
+describe("the invite", () => {
+  it("tells the reader what they get, not how we are doing", () => {
+    // The first version led with how far some country was from publishing,
+    // which asks a stranger to care about our progress bar. Worse, the country
+    // was whichever happened to be nearest the threshold, so a reader in
+    // Poland was being told about the United Kingdom.
+    expect(INVITE_MESSAGE).toMatch(/you find out/);
+    expect(INVITE_MESSAGE).not.toMatch(/answers away|needs \d+|before its median/);
   });
 
-  it("switches to the sharper-figures framing once a country has published", () => {
-    const message = gapMessage("Germany", 0, true);
+  it("stays in the third person, because the reader may not have answered", () => {
+    // The landing page and the explorer are both read by people who have not
+    // taken the survey. Putting "I just added my salary" in their mouth is the
+    // one thing guaranteed to stop them sending it.
+    expect(INVITE_MESSAGE).not.toMatch(/\bI\b|\bmy\b/);
+  });
+});
+
+describe("gapMessage", () => {
+  it("offers the reader the number, not a request for help", () => {
+    expect(gapMessage("Germany", 51, false)).toMatch(/before any of us can see what it really pays/);
+    expect(gapMessage("Germany", 0, true)).toMatch(/you find out what your job and level/);
+  });
+
+  it("names the sharer's own country, which is the network they post into", () => {
+    expect(gapMessage("Germany", 51, false)).toContain("Germany needs 51 more");
+    expect(gapMessage("Germany", 0, true)).toContain("in Germany");
+  });
+
+  it("drops the countdown once a country has published", () => {
     // "needs 0 more" is the failure this guards, and it reads as broken copy.
-    expect(message).not.toMatch(/needs \d+ more/);
-    expect(message).toContain("already up");
+    expect(gapMessage("Germany", 0, true)).not.toMatch(/needs \d+|\d+ more/);
+  });
+
+  it("gives the two countries that need one a definite article", () => {
+    // "United Kingdom needs 58 more" is the sort of thing that makes a reader
+    // assume the whole page was machine-written.
+    expect(gapMessage("Netherlands", 40, false)).toContain("the Netherlands needs");
+    // ...and never at the start of a sentence, where that lowercase article
+    // would read just as wrong in the other direction.
+    for (const country of ["Netherlands", "United Kingdom"]) {
+      for (const message of [gapMessage(country, 9, false), gapMessage(country, 0, true)]) {
+        expect(message, message).not.toMatch(/(^|\. )the /);
+      }
+    }
+    expect(gapMessage("United Kingdom", 0, true)).toContain("in the United Kingdom");
+    expect(gapMessage("Germany", 40, false)).not.toContain("the Germany");
   });
 
   it("never promises we can email somebody about their own answers", () => {
@@ -46,45 +68,8 @@ describe("gapMessage", () => {
   });
 });
 
-describe("shareMessageFor", () => {
-  it("stays in the third person, because the reader may not have answered", () => {
-    // The landing page and the explorer are both read by people who have not
-    // taken the survey. Putting "I just added my salary" in their mouth is the
-    // one thing guaranteed to stop them sending it.
-    const message = shareMessageFor(country());
-    expect(message).not.toMatch(/\bI\b|\bmy\b/);
-  });
-
-  it("names the country nearest to publishing and how far it has to go", () => {
-    expect(shareMessageFor(country({ responses: 9 }))).toContain(
-      `Germany is ${COUNTRY_PUBLISH_MIN - 9} answers away`,
-    );
-  });
-
-  it("gives the two countries that need one a definite article", () => {
-    // "United Kingdom is 58 answers away" is the sort of thing that makes a
-    // reader assume the whole page was machine-written, and this copy goes out
-    // under their name.
-    expect(shareMessageFor(country({ name: "United Kingdom" }))).toContain("the United Kingdom is");
-    expect(gapMessage("Netherlands", 40, false)).toContain("the Netherlands needs");
-    expect(gapMessage("Germany", 40, false)).not.toContain("the Germany");
-  });
-
-  it("falls back to the general message when nothing is close", () => {
-    expect(shareMessageFor(undefined)).toBe(GENERAL_MESSAGE);
-    // A country already over the line has no gap to close, so naming it would
-    // ask for help with something already done.
-    expect(shareMessageFor(country({ responses: COUNTRY_PUBLISH_MIN }))).toBe(GENERAL_MESSAGE);
-  });
-});
-
 describe("every message", () => {
-  const all = [
-    GENERAL_MESSAGE,
-    gapMessage("Germany", 51, false),
-    gapMessage("Germany", 0, true),
-    shareMessageFor(country()),
-  ];
+  const all = [INVITE_MESSAGE, gapMessage("Germany", 51, false), gapMessage("Germany", 0, true)];
 
   it("carries no em dashes", () => {
     // House style for shared copy: it has to read like a person typing, and an
@@ -97,7 +82,7 @@ describe("every message", () => {
   it("stays short enough for the strictest channel", () => {
     // X counts a URL as 23 characters regardless of length.
     for (const message of all) {
-      expect(message.length + 24).toBeLessThanOrEqual(280);
+      expect(message.length + 24, message).toBeLessThanOrEqual(280);
     }
   });
 
@@ -105,6 +90,12 @@ describe("every message", () => {
     for (const message of all) {
       expect(message).toContain("whatweearn");
       expect(message).toMatch(/salary survey/);
+    }
+  });
+
+  it("says the two minutes, which is the whole objection being answered", () => {
+    for (const message of all) {
+      expect(message).toMatch(/two minutes/i);
     }
   });
 });
