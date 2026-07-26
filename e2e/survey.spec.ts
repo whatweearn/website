@@ -477,8 +477,8 @@ test.describe("the confirmation screen", () => {
       /Share on X/,
       /Share on LinkedIn/,
       /Post to Reddit/,
-      /Submit to Hacker News/,
       /Send on WhatsApp/,
+      /Share by email/,
     ]) {
       await expect(share.getByRole("link", { name })).toBeVisible();
     }

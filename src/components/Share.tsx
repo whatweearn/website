@@ -2,14 +2,7 @@
 
 import { type ReactNode, useId, useState, useSyncExternalStore } from "react";
 
-import {
-  EnvelopeIcon,
-  HackerNewsIcon,
-  LinkedInIcon,
-  RedditIcon,
-  WhatsAppIcon,
-  XIcon,
-} from "./icons";
+import { EnvelopeIcon, LinkedInIcon, RedditIcon, WhatsAppIcon, XIcon } from "./icons";
 import { buttonClasses, cx } from "./ui";
 
 /**
@@ -39,12 +32,28 @@ const LINK_TITLE = "whatweearn: an anonymous salary survey for engineers in Euro
 
 type Channel = {
   name: string;
-  /** Shown to screen readers, which otherwise hear six bare brand names. */
+  /** Shown to screen readers, which otherwise hear five bare brand names. */
   label: string;
   /** The mark. A share row is scanned for the logo before the word is read. */
   Icon: typeof XIcon;
   href: (message: string, url: string) => string;
 };
+
+/**
+ * Five, and they fit on one line.
+ *
+ * Hacker News was the sixth and is deliberately gone. Every channel here is a
+ * *forward* — one person handing this to people they know — and HN is a
+ * submission to a global front page where only the first one counts. The
+ * second through five-hundredth respondent pressing it produce duplicates
+ * folded into the original, and a stream of repeat submissions of one URL from
+ * many accounts is the pattern that gets a domain penalised. Submitting to HN
+ * is the operator's job, once, as part of the seeding push in CLAUDE.md §9
+ * Phase 7 — not something to nudge every respondent into.
+ *
+ * Reddit looks similar but earns its place: national subreddits mean many
+ * different submissions are genuinely useful rather than duplicates.
+ */
 
 const CHANNELS: readonly Channel[] = [
   {
@@ -66,12 +75,6 @@ const CHANNELS: readonly Channel[] = [
     label: "Post to Reddit",
     Icon: RedditIcon,
     href: (_m, url) => `https://www.reddit.com/submit?url=${enc(url)}&title=${enc(LINK_TITLE)}`,
-  },
-  {
-    name: "Hacker News",
-    label: "Submit to Hacker News",
-    Icon: HackerNewsIcon,
-    href: (_m, url) => `https://news.ycombinator.com/submitlink?u=${enc(url)}&t=${enc(LINK_TITLE)}`,
   },
   {
     name: "WhatsApp",
