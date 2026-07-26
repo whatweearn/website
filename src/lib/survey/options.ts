@@ -93,8 +93,168 @@ export const CONTRACT_TYPES = [
   { value: "permanent", label: "Permanent employee", hint: "Open-ended employment contract" },
   { value: "fixed_term", label: "Fixed-term employee", hint: "Employment contract with an end date" },
   { value: "contractor", label: "Contractor / freelance", hint: "You invoice for your work" },
-  { value: "b2b", label: "B2B", hint: "Company-to-company, e.g. Polish B2B or Freiberufler" },
+  { value: "b2b", label: "B2B", hint: "Company-to-company, through your own business" },
 ] as const;
+
+export type ContractType = (typeof CONTRACT_TYPES)[number]["value"];
+
+/**
+ * The local name for each contract type, shown once the country is known.
+ *
+ * This is a data-quality measure, not a translation. The generic English
+ * labels describe four categories accurately and still fail in practice,
+ * because the boundary that decides whether a response reaches a headline
+ * median — employee versus not — is drawn by *local* law under local names.
+ * Somebody on a Polish umowa zlecenie or an Italian co.co.co. is not an
+ * employee, but "Fixed-term employee" reads like a fair description of their
+ * situation. Picking it puts a non-employee gross figure into the employees-
+ * only median, which is precisely the contamination {@link isHeadlineEligible}
+ * exists to prevent, and nothing downstream can detect it.
+ *
+ * Only the hint changes. Values are never localised: the stored answer is the
+ * same token whatever the respondent read, so the dataset stays language-
+ * independent and comparable across countries. `options.test.ts` enforces that.
+ *
+ * Countries are absent rather than guessed. An omission falls back to the
+ * generic hint, which is merely unhelpful; a wrong legal term is worse than
+ * none, because it invites exactly the misclassification this is meant to fix.
+ * Switzerland is deliberately absent — it has three working languages and
+ * picking one would mislead the other two.
+ *
+ * TODO before launch: these need review by a native speaker per country. They
+ * are researched, not authoritative, and a mistranslated contract form here
+ * corrupts the headline figure silently.
+ */
+export const CONTRACT_LOCAL_TERMS: Partial<
+  Record<CountryCode, Partial<Record<ContractType, string>>>
+> = {
+  AT: {
+    permanent: "Unbefristeter Dienstvertrag",
+    fixed_term: "Befristeter Dienstvertrag",
+    contractor: "Freier Dienstvertrag oder Werkvertrag",
+    b2b: "Über eine eigene Firma (GmbH)",
+  },
+  BE: {
+    permanent: "Contract onbepaalde duur / CDI",
+    fixed_term: "Contract bepaalde duur / CDD",
+    contractor: "Zelfstandige / indépendant",
+    b2b: "Via je eigen vennootschap / via votre société",
+  },
+  CZ: {
+    permanent: "Pracovní smlouva na dobu neurčitou",
+    fixed_term: "Pracovní smlouva na dobu určitou",
+    contractor: "OSVČ (na IČO)",
+    b2b: "Přes vlastní s.r.o.",
+  },
+  DE: {
+    permanent: "Unbefristeter Arbeitsvertrag",
+    fixed_term: "Befristeter Arbeitsvertrag",
+    contractor: "Freiberuflich, auf Rechnung",
+    b2b: "Über eine eigene GmbH oder UG",
+  },
+  DK: {
+    permanent: "Fastansættelse",
+    fixed_term: "Tidsbegrænset ansættelse",
+    contractor: "Freelance / selvstændig",
+    b2b: "Gennem eget selskab (ApS)",
+  },
+  ES: {
+    permanent: "Contrato indefinido",
+    fixed_term: "Contrato temporal",
+    contractor: "Autónomo",
+    b2b: "A través de tu propia sociedad (SL)",
+  },
+  FI: {
+    permanent: "Toistaiseksi voimassa oleva työsopimus",
+    fixed_term: "Määräaikainen työsopimus",
+    contractor: "Toiminimi tai kevytyrittäjyys",
+    b2b: "Oman yrityksen kautta (Oy)",
+  },
+  FR: {
+    permanent: "CDI",
+    fixed_term: "CDD",
+    contractor: "Freelance / auto-entrepreneur",
+    b2b: "Via votre société (SASU, EURL)",
+  },
+  GR: {
+    permanent: "Σύμβαση αορίστου χρόνου",
+    fixed_term: "Σύμβαση ορισμένου χρόνου",
+    contractor: "Μπλοκάκι — ελεύθερος επαγγελματίας",
+    b2b: "Μέσω δικής σου εταιρείας",
+  },
+  IE: {
+    permanent: "Permanent contract of employment",
+    fixed_term: "Fixed-term or specified-purpose contract",
+    contractor: "Sole trader contractor",
+    b2b: "Through your own limited company",
+  },
+  IT: {
+    permanent: "Contratto a tempo indeterminato",
+    fixed_term: "Contratto a tempo determinato o co.co.co.",
+    contractor: "Partita IVA",
+    b2b: "Tramite la tua società (SRL)",
+  },
+  NL: {
+    permanent: "Vast contract, onbepaalde tijd",
+    fixed_term: "Tijdelijk contract, bepaalde tijd",
+    contractor: "ZZP'er",
+    b2b: "Via je eigen BV",
+  },
+  NO: {
+    permanent: "Fast ansettelse",
+    fixed_term: "Midlertidig ansettelse",
+    contractor: "Frilans / selvstendig",
+    b2b: "Gjennom eget selskap (AS)",
+  },
+  PL: {
+    permanent: "Umowa o pracę na czas nieokreślony",
+    fixed_term: "Umowa o pracę na czas określony",
+    contractor: "Umowa zlecenie lub umowa o dzieło",
+    b2b: "Kontrakt B2B (JDG)",
+  },
+  PT: {
+    permanent: "Contrato sem termo",
+    fixed_term: "Contrato a termo",
+    contractor: "Recibos verdes — trabalhador independente",
+    b2b: "Através da tua empresa (Lda.)",
+  },
+  RO: {
+    permanent: "Contract individual de muncă, perioadă nedeterminată",
+    fixed_term: "Contract individual de muncă, perioadă determinată",
+    contractor: "PFA sau întreprindere individuală",
+    b2b: "Prin propria firmă (SRL)",
+  },
+  SE: {
+    permanent: "Tillsvidareanställning",
+    fixed_term: "Visstidsanställning",
+    contractor: "Frilans / egenanställd",
+    b2b: "Via eget bolag (AB)",
+  },
+  UK: {
+    permanent: "Permanent contract of employment",
+    fixed_term: "Fixed-term contract",
+    contractor: "Sole trader, umbrella, or inside IR35",
+    b2b: "Own limited company, outside IR35",
+  },
+};
+
+/**
+ * The contract options to show, named the way the respondent's own payslip
+ * names them once {@link COUNTRIES} has been answered.
+ *
+ * Order and values are identical in every country, so this cannot change what
+ * gets stored — only what the respondent reads while choosing.
+ */
+export function contractTypesFor(
+  country?: CountryCode,
+): readonly { value: ContractType; label: string; hint: string }[] {
+  const local = country ? CONTRACT_LOCAL_TERMS[country] : undefined;
+  return CONTRACT_TYPES.map((option) => ({
+    value: option.value,
+    label: option.label,
+    hint: local?.[option.value] ?? option.hint,
+  }));
+}
 
 export const DISCIPLINES = [
   { value: "backend", label: "Backend" },
