@@ -449,6 +449,18 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
 - The two database clients are separate modules with separate credentials. **A single file must
   never import both.** Enforce with a lint rule — this is the anonymity boundary in code form.
 - No third-party scripts on any page.
+- **Icons are inline SVG, and they all live in `src/components/icons.tsx`.** The CSP rules
+  out an icon font or a CDN sprite sheet, so every glyph is hand-inlined — which is why the
+  site drifted into using bare Unicode codepoints (`☀ ☾ ◐ ✓ ✕`) wherever an icon belonged.
+  That is not a style choice, it is a rendering bug waiting to happen: `☀` has an emoji
+  presentation on several platforms, and the rest fall back to whatever font carries them.
+  Draw it instead. Icons are decorative, so they are `aria-hidden` with the control
+  carrying a visible label or an `aria-label` — never an icon as the only name.
+  `→` and `←` stay as text: they sit inline in a sentence, inherit font size, and one is
+  animated by a transform on a text span.
+- **Brand marks are copied from source, never redrawn.** Paths come from simple-icons
+  (CC0) verbatim; a hand-approximated logo looks worse than no logo. LinkedIn is pinned
+  from simple-icons 11.14.0, the last release before they removed it at LinkedIn's request.
 - Tests: unit for stats, property tests for percentiles, Playwright for the survey funnel,
   automated a11y checks. Plus a specific test asserting no response payload contains an email
   and no subscriber row carries a sub-day timestamp.

@@ -4,6 +4,7 @@ import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "@/lib
 
 import Link from "next/link";
 
+import { CheckIcon, CrossIcon, FileIcon, FiltersIcon, GlobeIcon } from "./icons";
 import { Reveal } from "./Reveal";
 import { Share } from "./Share";
 import { Button, Container, Pill, SectionHead, TrustLine } from "./ui";
@@ -251,11 +252,8 @@ export function SurveyPreview() {
                     key={ask.label}
                     className="flex items-center gap-3 border-t border-line py-[0.62rem] first:border-t-0"
                   >
-                    <span
-                      aria-hidden="true"
-                      className="grid size-5 shrink-0 place-items-center rounded-full bg-wash text-[11px] font-bold text-accent"
-                    >
-                      ✓
+                    <span className="grid size-5 shrink-0 place-items-center rounded-full bg-wash text-accent">
+                      <CheckIcon />
                     </span>
                     {ask.label}
                     {ask.optional && (
@@ -275,11 +273,8 @@ export function SurveyPreview() {
               <ul className="m-0 grid list-none gap-4 p-0">
                 {NEVERS.map(([lead, rest]) => (
                   <li key={lead} className="flex items-start gap-3 text-xs leading-relaxed text-ink-2">
-                    <span
-                      aria-hidden="true"
-                      className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-line-2 text-[10px] text-ink-3"
-                    >
-                      ✕
+                    <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-line-2 text-ink-3">
+                      <CrossIcon />
                     </span>
                     <span>
                       <b className="font-semibold text-ink">{lead}</b>
@@ -313,36 +308,17 @@ const TILES = [
   {
     title: "Find out where you sit",
     body: "Medians and quartiles by country, level and experience, so \"am I underpaid\" stops being a feeling and becomes a percentile — cost-of-living adjusted if you want it, raw if you don't.",
-    icon: (
-      <>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M3 12h18" />
-        <path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z" />
-      </>
-    ),
+    Icon: GlobeIcon,
   },
   {
     title: "A number for the actual conversation",
     body: `Senior backend, Go, 200-person fintech, Lisbon, hybrid. Narrow it to your exact seat and walk in with a quartile instead of a hunch. Filter until the sample thins below ${MIN_CELL_SIZE} and we say so instead of guessing.`,
-    icon: (
-      <>
-        <path d="M4 7h16M4 12h16M4 17h16" />
-        <circle cx="9" cy="7" r="2.2" />
-        <circle cx="15" cy="12" r="2.2" />
-        <circle cx="8" cy="17" r="2.2" />
-      </>
-    ),
+    Icon: FiltersIcon,
   },
   {
     title: "The raw file",
     body: "The full anonymised dataset as CSV under CC BY 4.0. Plot it, audit it, argue with it. Rebuilt nightly.",
-    icon: (
-      <>
-        <path d="M6 3h8l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
-        <path d="M14 3v5h5" />
-        <path d="M12 12v6M9.5 15.5 12 18l2.5-2.5" />
-      </>
-    ),
+    Icon: FileIcon,
   },
 ];
 
@@ -369,22 +345,8 @@ export function Payoff({ published }: { published: boolean }) {
               key={tile.title}
               className="flex flex-col gap-2.5 rounded-lg border border-line bg-surface p-6 shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-[3px] hover:shadow-md"
             >
-              <span
-                aria-hidden="true"
-                className="mb-2 grid size-[38px] place-items-center rounded-md bg-wash text-accent"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.7"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  {tile.icon}
-                </svg>
+              <span className="mb-2 grid size-[38px] place-items-center rounded-md bg-wash text-accent">
+                <tile.Icon />
               </span>
               <h3 className="text-lg">{tile.title}</h3>
               <p className="text-xs leading-relaxed text-ink-2">{tile.body}</p>

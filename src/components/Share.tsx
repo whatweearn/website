@@ -2,6 +2,14 @@
 
 import { type ReactNode, useId, useState, useSyncExternalStore } from "react";
 
+import {
+  EnvelopeIcon,
+  HackerNewsIcon,
+  LinkedInIcon,
+  RedditIcon,
+  WhatsAppIcon,
+  XIcon,
+} from "./icons";
 import { buttonClasses, cx } from "./ui";
 
 /**
@@ -33,6 +41,8 @@ type Channel = {
   name: string;
   /** Shown to screen readers, which otherwise hear six bare brand names. */
   label: string;
+  /** The mark. A share row is scanned for the logo before the word is read. */
+  Icon: typeof XIcon;
   href: (message: string, url: string) => string;
 };
 
@@ -40,11 +50,13 @@ const CHANNELS: readonly Channel[] = [
   {
     name: "X",
     label: "Share on X",
+    Icon: XIcon,
     href: (m, url) => `https://x.com/intent/post?text=${enc(m)}&url=${enc(url)}`,
   },
   {
     name: "LinkedIn",
     label: "Share on LinkedIn",
+    Icon: LinkedInIcon,
     // LinkedIn drops any text passed alongside the URL and builds its own
     // preview card, so sending the message too would only be theatre.
     href: (_m, url) => `https://www.linkedin.com/sharing/share-offsite/?url=${enc(url)}`,
@@ -52,21 +64,25 @@ const CHANNELS: readonly Channel[] = [
   {
     name: "Reddit",
     label: "Post to Reddit",
+    Icon: RedditIcon,
     href: (_m, url) => `https://www.reddit.com/submit?url=${enc(url)}&title=${enc(LINK_TITLE)}`,
   },
   {
     name: "Hacker News",
     label: "Submit to Hacker News",
+    Icon: HackerNewsIcon,
     href: (_m, url) => `https://news.ycombinator.com/submitlink?u=${enc(url)}&t=${enc(LINK_TITLE)}`,
   },
   {
     name: "WhatsApp",
     label: "Send on WhatsApp",
+    Icon: WhatsAppIcon,
     href: (m, url) => `https://wa.me/?text=${enc(`${m} ${url}`)}`,
   },
   {
     name: "Email",
     label: "Share by email",
+    Icon: EnvelopeIcon,
     href: (m, url) => `mailto:?subject=${enc(LINK_TITLE)}&body=${enc(`${m}\n\n${url}\n`)}`,
   },
 ];
@@ -227,11 +243,15 @@ export function Share({
               rel="noopener noreferrer"
               aria-label={channel.label}
               className={cx(
-                "inline-flex items-center rounded-full border border-line-2 px-[0.85rem] py-[0.45rem]",
+                "inline-flex items-center gap-[0.4rem] rounded-full border border-line-2 px-[0.8rem] py-[0.45rem]",
                 "text-2xs font-semibold whitespace-nowrap text-ink-2 no-underline",
                 "transition-colors hover:border-ink-3 hover:bg-tint hover:text-ink",
               )}
             >
+              {/* The mark and the word together. The logo is what the eye
+                  finds; the word is what makes it unambiguous at 13px, and
+                  keeps the row legible if a mark ever fails to paint. */}
+              <channel.Icon className="shrink-0" />
               {channel.name}
             </a>
           </li>
