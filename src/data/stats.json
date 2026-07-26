@@ -1,54 +1,8 @@
 {
-  "totalResponses": 2,
-  "countriesCovered": 1,
+  "totalResponses": 0,
+  "countriesCovered": 0,
   "europe": null,
-  "countries": [
-    {
-      "name": "Germany",
-      "currency": "EUR",
-      "responses": 2,
-      "median": null,
-      "p25": null,
-      "p75": null
-    }
-  ],
-  "cuts": {
-    "DE|senior": {
-      "country": "DE",
-      "level": "senior",
-      "responses": 2,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    },
-    "DE|*": {
-      "country": "DE",
-      "level": null,
-      "responses": 2,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    },
-    "*|senior": {
-      "country": null,
-      "level": "senior",
-      "responses": 2,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    },
-    "*|*": {
-      "country": null,
-      "level": null,
-      "responses": 2,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    }
-  },
+  "countries": [],
+  "cuts": {},
   "datasetRows": 0
 }
