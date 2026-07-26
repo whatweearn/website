@@ -150,3 +150,30 @@ test("the page is usable at 200% zoom without horizontal scrolling", async ({ pa
     ).toBeLessThanOrEqual(0);
   }
 });
+
+test("the skip link is reachable by keyboard and invisible to the mouse", async ({ page }) => {
+  const skip = page.getByRole("link", { name: "Skip to content" });
+  const height = async () => (await skip.boundingBox())?.height ?? 0;
+
+  await page.goto("/");
+  expect(await height()).toBeLessThan(5);
+
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  expect(await height()).toBeGreaterThan(20);
+
+  // The regression this guards. After a client-side navigation the App Router
+  // focuses the first element of the new segment, which on this page is the
+  // skip link. That once made the pill appear for mouse users, and — because
+  // the link already held focus — made the first Tab step straight over it.
+  await page.goto("/data");
+  await page.getByRole("link", { name: "whatweearn" }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await expect(skip).not.toBeFocused();
+  expect(await height()).toBeLessThan(5);
+
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  expect(await height()).toBeGreaterThan(20);
+});
