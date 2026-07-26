@@ -61,23 +61,52 @@ export class PostgresResponseRepository implements ResponseRepository {
   }
 }
 
+/**
+ * Column for every field the aggregation reads, checked by the compiler.
+ *
+ * `satisfies Record<keyof AggregateRow, string>` is the point of this object.
+ * Migration 0002 added `salary_period` and its multipliers, updated
+ * {@link loadMicrodataRows}, and missed the query below. Nothing complained:
+ * the hand-written SELECT was cast to `AggregateRow[]`, which is an assertion
+ * rather than a check, and `annualise()` treats a missing period as annual for
+ * backward compatibility. Every monthly and daily response was therefore
+ * valued at roughly a twelfth of its real figure, silently, for as long as the
+ * column was missing.
+ *
+ * Adding a field to `AggregateRow` or `RateInput` now fails typecheck until it
+ * is given a column here, so the reader cannot fall behind the schema again.
+ */
+const AGGREGATE_COLUMNS = {
+  country: "country",
+  level: "level",
+  contractType: "contract_type",
+  ftePercent: "fte_percent",
+  baseSalary: "base_salary",
+  salaryPeriod: "salary_period",
+  paymentsPerYear: "payments_per_year",
+  daysPerYear: "days_per_year",
+  hoursPerYear: "hours_per_year",
+  bonus: "bonus",
+  equityAnnual: "equity_annual",
+  currency: "currency",
+} as const satisfies Record<keyof AggregateRow, string>;
+
+/** `base_salary AS "baseSalary", …` — built from the map above, never by hand. */
+export const AGGREGATE_SELECT_LIST = Object.entries(AGGREGATE_COLUMNS)
+  .map(([alias, column]) => `${column} AS "${alias}"`)
+  .join(", ");
+
+export const AGGREGATE_WHERE = "superseded_by IS NULL AND excluded_reason IS NULL";
+
 /** Every response the aggregation is allowed to consider. */
 export async function loadAggregateRows(): Promise<AggregateRow[]> {
   const sql = db();
-  return sql<AggregateRow[]>`
-    SELECT
-      country,
-      level,
-      contract_type    AS "contractType",
-      fte_percent      AS "ftePercent",
-      base_salary      AS "baseSalary",
-      bonus,
-      equity_annual    AS "equityAnnual",
-      currency
-    FROM responses
-    WHERE superseded_by IS NULL
-      AND excluded_reason IS NULL
-  `;
+  // `unsafe` only in the sense that the text is not a tagged template. Every
+  // part of it comes from the compile-time map above; no value from a request
+  // reaches this string.
+  return sql.unsafe<AggregateRow[]>(
+    `SELECT ${AGGREGATE_SELECT_LIST} FROM responses WHERE ${AGGREGATE_WHERE}`,
+  );
 }
 
 /** Most recent published rate for each currency, as units per euro. */

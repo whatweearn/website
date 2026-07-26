@@ -1,8 +1,11 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+import { annualise } from "../survey/annualise";
+import { AGGREGATE_SELECT_LIST, AGGREGATE_WHERE } from "./responseRepository";
 
 /**
  * The migrations and queries, run against real Postgres.
@@ -13,7 +16,22 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  * meant the storage layer's first real execution happened in production.
  */
 
-const schema = readFileSync(join(process.cwd(), "db/migrations/0001_init.sql"), "utf8");
+/**
+ * Every migration, in order — not just the first.
+ *
+ * This read used to name `0001_init.sql` directly, so the test database was
+ * missing everything 0002 added. That is a large part of why the aggregation
+ * reader could go on ignoring `salary_period` unnoticed: a test that tried to
+ * use the column would have failed for the wrong reason. Reading the directory
+ * means a new migration joins the suite by existing.
+ */
+const MIGRATIONS_DIR = join(process.cwd(), "db/migrations");
+const migrations = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.endsWith(".sql"))
+  .sort();
+const schema = migrations
+  .map((f) => readFileSync(join(MIGRATIONS_DIR, f), "utf8"))
+  .join("\n");
 
 let db: PGlite;
 
@@ -176,5 +194,52 @@ describe("fx_rates", () => {
        WHERE currency = 'CHF' ORDER BY currency, rate_date DESC`,
     );
     expect(Number(rows.rows[0]!.per_eur)).toBeCloseTo(0.95, 4);
+  });
+});
+
+describe("the aggregation's own SELECT", () => {
+  /**
+   * The compiler guarantees every `AggregateRow` field has a column name. It
+   * cannot guarantee the column exists in the schema, or that a monthly figure
+   * survives the trip and annualises correctly. This runs the real select list
+   * against the real schema and pushes the result through `annualise`.
+   *
+   * Without this, the reader falling behind a migration is invisible:
+   * `annualise` treats a missing period as annual, so a monthly salary becomes
+   * an annual one, twelve times too small, with no error anywhere.
+   */
+  const COUNTRY = "YY";
+
+  beforeAll(async () => {
+    await db.query(
+      `INSERT INTO responses
+         (submitted_on, handle, country, contract_type, fte_percent, level,
+          base_salary, currency, salary_period, payments_per_year)
+       VALUES ('2026-07-24', 'agg-monthly', $1, 'permanent', 100, 'senior',
+               5000, 'EUR', 'month', 12)`,
+      [COUNTRY],
+    );
+  });
+
+  it("selects every column the aggregation needs", async () => {
+    const result = await db.query(
+      `SELECT ${AGGREGATE_SELECT_LIST} FROM responses WHERE ${AGGREGATE_WHERE} AND country = $1`,
+      [COUNTRY],
+    );
+    const row = result.rows[0] as Record<string, unknown>;
+    for (const field of ["salaryPeriod", "paymentsPerYear", "daysPerYear", "hoursPerYear"]) {
+      // `null` is a real answer; `undefined` means the column was not selected.
+      expect(row[field], `${field} missing from the select list`).not.toBeUndefined();
+    }
+  });
+
+  it("annualises a monthly salary to twelve months, not one", async () => {
+    const result = await db.query(
+      `SELECT ${AGGREGATE_SELECT_LIST} FROM responses WHERE ${AGGREGATE_WHERE} AND country = $1`,
+      [COUNTRY],
+    );
+    const annual = annualise(result.rows[0] as never);
+    expect(annual.ok).toBe(true);
+    expect(annual.ok && annual.annual).toBe(60_000);
   });
 });
