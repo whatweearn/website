@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "./thresholds";
 import {
   type Distribution,
+  type SiteStats,
+  countriesNearingPublication,
   getSiteStats,
   percentileAt,
   publishableCountries,
@@ -123,5 +125,55 @@ describe("publishableCountries", () => {
       ],
     });
     expect(rows.map((r) => r.name)).toEqual(["Germany"]);
+  });
+});
+
+describe("countriesNearingPublication", () => {
+  const statsWith = (countries: SiteStats["countries"]): SiteStats => ({
+    totalResponses: countries.reduce((sum, c) => sum + c.responses, 0),
+    countriesCovered: countries.length,
+    europe: null,
+    cuts: {},
+    countries,
+  });
+
+  const row = (name: string, responses: number, median: number | null = null) => ({
+    name,
+    currency: "EUR",
+    responses,
+    median,
+    p25: null,
+    p75: null,
+  });
+
+  it("ranks the unpublished countries by how close they are", () => {
+    const rows = countriesNearingPublication(
+      statsWith([row("Portugal", 12), row("Germany", 47), row("Spain", 30)]),
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Germany", "Spain", "Portugal"]);
+  });
+
+  it("drops countries that have already published", () => {
+    // A published country is no longer something a visitor can help with, so
+    // listing it would be asking for an answer that changes nothing.
+    const rows = countriesNearingPublication(
+      statsWith([row("Germany", 60, 70_000), row("Spain", 30)]),
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Spain"]);
+  });
+
+  it("returns nothing during the cold start, so the section stays hidden", () => {
+    expect(countriesNearingPublication(statsWith([]))).toEqual([]);
+  });
+
+  it("breaks ties by name rather than leaving the order to the aggregation", () => {
+    const rows = countriesNearingPublication(statsWith([row("Spain", 20), row("Austria", 20)]));
+    expect(rows.map((r) => r.name)).toEqual(["Austria", "Spain"]);
+  });
+
+  it("caps the list so the page does not turn into a leaderboard of twenty-seven", () => {
+    const many = Array.from({ length: 12 }, (_, i) => row(`Country ${i}`, 12 - i));
+    expect(countriesNearingPublication(statsWith(many))).toHaveLength(6);
+    expect(countriesNearingPublication(statsWith(many), 3)).toHaveLength(3);
   });
 });

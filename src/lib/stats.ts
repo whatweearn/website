@@ -99,6 +99,29 @@ export function hasPublishedFigures(stats: SiteStats): boolean {
   return stats.europe !== null || stats.countries.some((c) => c.median !== null);
 }
 
+/**
+ * The countries nearest to publishing, nearest first.
+ *
+ * Only countries still short of the threshold: one that has published is no
+ * longer something a visitor can help with.
+ *
+ * The counts are the ones the aggregation puts in `CountryRow.responses`,
+ * which are headline-eligible responses — employees on full-time standard
+ * contracts. That is deliberate, because it is the population
+ * {@link isCountryPublishable} is actually applied to. Counting every response
+ * instead would promise a publication that the aggregation then declines to
+ * make.
+ */
+export function countriesNearingPublication(
+  stats: SiteStats,
+  limit = 6,
+): readonly CountryRow[] {
+  return stats.countries
+    .filter((c) => c.median === null && c.responses > 0)
+    .sort((a, b) => b.responses - a.responses || a.name.localeCompare(b.name))
+    .slice(0, limit);
+}
+
 export function totalCount(d: Distribution): number {
   return d.bins.reduce((sum, bin) => sum + bin.count, 0);
 }

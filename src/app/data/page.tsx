@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CountryProgress } from "@/components/CountryProgress";
 import { Explorer } from "@/components/Explorer";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { Container } from "@/components/ui";
 import { count } from "@/lib/format";
-import { getSiteStats } from "@/lib/stats";
+import {
+  countriesNearingPublication,
+  getSiteStats,
+  hasPublishedFigures,
+} from "@/lib/stats";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "@/lib/thresholds";
 
 export const metadata: Metadata = {
@@ -17,6 +22,7 @@ export const metadata: Metadata = {
 
 export default async function DataPage() {
   const stats = await getSiteStats();
+  const published = hasPublishedFigures(stats);
 
   return (
     <main className="py-[clamp(2rem,5vw,4rem)]">
@@ -26,15 +32,25 @@ export default async function DataPage() {
         </Link>
 
         <h1 className="mt-8 max-w-[16ch] text-2xl tracking-[-0.034em]">What engineers earn.</h1>
+        {/* Gated on whether anything has *published*, not on whether anyone has
+            answered. Those stopped being the same thing the moment the first
+            response arrived: with responses in hand but every slice still under
+            the threshold, "Built from 9 responses" reads as though there are
+            figures to look at, and there are none. The landing page has always
+            drawn this line with `hasPublishedFigures`; this page had not. */}
         <p className="mt-3 max-w-[52ch] text-ink-2">
-          {stats.totalResponses === 0
-            ? "Nothing is published yet. The first figures appear once a slice clears the threshold below."
-            : `Built from ${count(stats.totalResponses)} responses across ${count(stats.countriesCovered)} countries. Rebuilt nightly.`}
+          {published
+            ? `Built from ${count(stats.totalResponses)} responses across ${count(stats.countriesCovered)} countries. Rebuilt nightly.`
+            : stats.totalResponses === 0
+              ? "Nothing is published yet. The first figures appear once a slice clears the threshold below."
+              : `${count(stats.totalResponses)} responses so far, across ${count(stats.countriesCovered)} countries. Nothing is published yet — the first figures appear once a slice clears the threshold below.`}
         </p>
 
         <div className="mt-10">
           <Explorer stats={stats} />
         </div>
+
+        <CountryProgress countries={countriesNearingPublication(stats)} />
 
         <section className="mt-16 border-t border-line pt-8">
           <h2 className="text-lg">Take the whole thing</h2>
