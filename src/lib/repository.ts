@@ -1,5 +1,6 @@
 import { hasDatabase } from "./db/client";
 import { PostgresResponseRepository } from "./db/responseRepository";
+import { isHeadlineEligible } from "./stats/eligibility";
 import type { SurveyResponse } from "./survey/schema";
 
 /**
@@ -57,7 +58,17 @@ class InMemoryRepository implements ResponseRepository {
   }
 
   async countForCountry(country: string): Promise<number> {
-    return this.records.filter((r) => r.response.country === country).length;
+    // Same rule as Postgres. Divergence between the two implementations is
+    // what let the last storage bug through, since the suite exercises this
+    // one and production runs the other.
+    return this.records.filter(
+      (r) =>
+        r.response.country === country &&
+        isHeadlineEligible({
+          contractType: r.response.contractType,
+          ftePercent: r.response.ftePercent ?? null,
+        }),
+    ).length;
   }
 
   /** Test seam. */

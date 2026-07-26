@@ -1,5 +1,6 @@
 import type { ResponseRepository, StoredResponse } from "../repository";
 import type { AggregateRow } from "../stats/aggregate";
+import { EMPLOYEE_CONTRACTS, MIN_FTE_PERCENT } from "../stats/eligibility";
 
 import { db } from "./client";
 
@@ -38,6 +39,23 @@ export class PostgresResponseRepository implements ResponseRepository {
     `;
   }
 
+  /**
+   * How many responses count towards this country's headline median.
+   *
+   * Not every stored response does. The contract-type and full-time filters
+   * mirror {@link isHeadlineEligible}, which is what the nightly aggregation
+   * applies before deciding whether a country publishes. Counting every row
+   * instead — as this did until it was corrected — made the confirmation
+   * screen promise "13 more" for a country that would then not publish,
+   * because a dozen of the rows counted were B2B, freelance or part-time.
+   *
+   * Still slightly optimistic: the aggregation also drops rows it cannot
+   * annualise (a day or hour rate with no count) or convert (no FX rate for
+   * the day). Both are rare and neither is expressible here without
+   * duplicating the whole conversion pipeline in SQL. The remaining error is
+   * small and in the same direction for every country, where it used to be
+   * large and to vary with how many contractors a country attracts.
+   */
   async countForCountry(country: string): Promise<number> {
     const sql = db();
     const rows = await sql<{ n: number }[]>`
@@ -45,6 +63,8 @@ export class PostgresResponseRepository implements ResponseRepository {
       WHERE country = ${country}
         AND superseded_by IS NULL
         AND excluded_reason IS NULL
+        AND contract_type = ANY(${sql.array([...EMPLOYEE_CONTRACTS])})
+        AND (fte_percent IS NULL OR fte_percent >= ${MIN_FTE_PERCENT})
     `;
     return rows[0]?.n ?? 0;
   }

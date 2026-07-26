@@ -2,8 +2,15 @@ import { type RateInput, annualise } from "../survey/annualise";
 import { COUNTRIES } from "../survey/options";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
 import { type RateTable, totalCompEuro } from "../fx/convert";
-import { type CountryRow, type Cut, type Distribution, type SiteStats, cutKey } from "../stats";
+import {
+  type CountryRow,
+  type Cut,
+  type Distribution,
+  type SiteStats,
+  cutKey,
+} from "../stats";
 
+import { isEmployeeContract, isHeadlineEligible } from "./eligibility";
 import { bins, summarise, trim } from "./quantiles";
 
 export type AggregateRow = RateInput & {
@@ -16,32 +23,10 @@ export type AggregateRow = RateInput & {
   currency: string;
 };
 
-/**
- * Contracts whose gross figures are comparable with one another.
- *
- * B2B and freelance gross carries the worker's social contributions, so it is
- * dramatically higher for the same take-home. Averaging it together with
- * employed gross produces a number that describes nobody — this is the single
- * most distorting mistake available in European pay data, and excluding it
- * from headline figures is the fix. Those responses stay in the dataset and
- * get their own cut; they just do not contaminate "what a country pays".
- */
-const EMPLOYEE_CONTRACTS = new Set(["permanent", "fixed_term"]);
-
-/**
- * Anything below this is not extrapolated to a full-time figure.
- *
- * Scaling a 60% contract up to 100% invents a salary nobody is paid. Omitting
- * part-timers from headline medians is the honest alternative; the dataset
- * still contains them.
- */
-const MIN_FTE_PERCENT = 90;
-
-export function isHeadlineEligible(row: AggregateRow): boolean {
-  if (!EMPLOYEE_CONTRACTS.has(row.contractType)) return false;
-  if (row.ftePercent !== null && row.ftePercent < MIN_FTE_PERCENT) return false;
-  return true;
-}
+// The rule itself lives in ./eligibility, because the live count in
+// `countForCountry` has to apply the same one in SQL. Re-exported so callers
+// and tests keep importing it from here.
+export { isHeadlineEligible } from "./eligibility";
 
 const COUNTRY_NAMES = new Map(COUNTRIES.map((c) => [c.code, c] as const));
 
@@ -66,7 +51,7 @@ export function aggregate(rows: readonly AggregateRow[], rates: RateTable): Aggr
 
   for (const row of rows) {
     if (!isHeadlineEligible(row)) {
-      bump(EMPLOYEE_CONTRACTS.has(row.contractType) ? "part_time" : "non_employee_contract");
+      bump(isEmployeeContract(row.contractType) ? "part_time" : "non_employee_contract");
       continue;
     }
     // A rate quoted per day or hour without its count cannot be annualised,

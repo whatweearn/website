@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { EMPLOYEE_CONTRACTS, MIN_FTE_PERCENT, isHeadlineEligible } from "../stats/eligibility";
 import { annualise } from "../survey/annualise";
 import { AGGREGATE_SELECT_LIST, AGGREGATE_WHERE } from "./responseRepository";
 
@@ -194,6 +195,74 @@ describe("fx_rates", () => {
        WHERE currency = 'CHF' ORDER BY currency, rate_date DESC`,
     );
     expect(Number(rows.rows[0]!.per_eur)).toBeCloseTo(0.95, 4);
+  });
+});
+
+describe("headline eligibility in SQL", () => {
+  /**
+   * The rule exists twice: in TypeScript for the nightly aggregation, and in
+   * SQL for the live count behind "Germany needs 47 more before its median
+   * publishes". This asserts the two agree on every combination, because the
+   * failure is silent — the site makes a promise and the aggregation declines
+   * to keep it.
+   *
+   * Deliberately compares against `isHeadlineEligible` rather than a
+   * hand-written expected number, so adding a condition to the rule and
+   * forgetting the query fails here.
+   */
+  const cases: { contractType: string; ftePercent: number | null }[] = [
+    { contractType: "permanent", ftePercent: null },
+    { contractType: "permanent", ftePercent: 100 },
+    { contractType: "permanent", ftePercent: MIN_FTE_PERCENT },
+    { contractType: "permanent", ftePercent: MIN_FTE_PERCENT - 1 },
+    { contractType: "permanent", ftePercent: 50 },
+    { contractType: "fixed_term", ftePercent: 100 },
+    { contractType: "fixed_term", ftePercent: 60 },
+    { contractType: "contractor", ftePercent: 100 },
+    { contractType: "contractor", ftePercent: null },
+    { contractType: "b2b", ftePercent: 100 },
+  ];
+
+  const COUNTRY = "ZZ";
+
+  beforeAll(async () => {
+    for (const [i, c] of cases.entries()) {
+      await db.query(
+        `INSERT INTO responses
+           (submitted_on, handle, country, contract_type, fte_percent, level, base_salary, currency)
+         VALUES ('2026-07-24', $1, $2, $3, $4, 'senior', 78000, 'EUR')`,
+        [`eligibility-${i}`, COUNTRY, c.contractType, c.ftePercent],
+      );
+    }
+  });
+
+  it("counts exactly the responses the aggregation would publish on", async () => {
+    const rows = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM responses
+       WHERE country = $1
+         AND superseded_by IS NULL
+         AND excluded_reason IS NULL
+         AND contract_type = ANY($2)
+         AND (fte_percent IS NULL OR fte_percent >= $3)`,
+      [COUNTRY, [...EMPLOYEE_CONTRACTS], MIN_FTE_PERCENT],
+    );
+
+    const expected = cases.filter(isHeadlineEligible).length;
+    expect(rows.rows[0]!.n).toBe(expected);
+    // Guards the test itself: if every case were eligible the assertion above
+    // would pass while proving nothing.
+    expect(expected).toBeGreaterThan(0);
+    expect(expected).toBeLessThan(cases.length);
+  });
+
+  it("excludes B2B, freelance and part-time rows rather than deleting them", async () => {
+    // They stay in the table and reach the dataset and their own cut. The
+    // headline count is the only place they are held back.
+    const stored = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM responses WHERE country = $1`,
+      [COUNTRY],
+    );
+    expect(stored.rows[0]!.n).toBe(cases.length);
   });
 });
 
