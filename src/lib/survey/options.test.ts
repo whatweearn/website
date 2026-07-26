@@ -5,7 +5,9 @@ import {
   CONTRACT_LOCAL_TERMS,
   CONTRACT_TYPES,
   COUNTRIES,
+  DISCIPLINES,
   ELSEWHERE,
+  LEVELS,
   citiesFor,
   contractTypesFor,
   valuesOf,
@@ -19,6 +21,46 @@ const GENERIC = Object.fromEntries(CONTRACT_TYPES.map((c) => [c.value, c.hint]))
 >;
 
 const LOCALISED = Object.keys(CONTRACT_LOCAL_TERMS) as CountryCode[];
+
+describe("roles", () => {
+  /**
+   * A repeated value is not a visible bug: both cards render, the second one
+   * shares an input id with the first, and clicking either selects one of them
+   * while the other silently stops working. Cheap to assert, hard to spot.
+   */
+  it("lists no value twice", () => {
+    for (const [name, options] of [
+      ["DISCIPLINES", DISCIPLINES],
+      ["LEVELS", LEVELS],
+    ] as const) {
+      const values = valuesOf(options);
+      expect(new Set(values).size, `${name} repeats a value`).toBe(values.length);
+    }
+  });
+
+  /**
+   * Architecture is deliberately in both lists (a discipline and a track), and
+   * the values are deliberately different strings. If they ever collide, a row
+   * of the published CSV carries the same token in the discipline and level
+   * columns meaning two different things, and every reader has to guess.
+   */
+  it("keeps discipline values distinct from level values", () => {
+    const levels = new Set<string>(valuesOf(LEVELS));
+    const shared = valuesOf(DISCIPLINES).filter((value) => levels.has(value));
+    expect(shared, "a discipline and a level share a stored value").toEqual([]);
+  });
+
+  /**
+   * The level screen tells people to choose by what they do rather than by
+   * their title, which only works if every option says what that is. One
+   * hintless card in a list of hinted ones reads as an unfinished form.
+   */
+  it("describes every level", () => {
+    for (const level of LEVELS) {
+      expect(level.hint, `${level.value} has no description`).toBeTruthy();
+    }
+  });
+});
 
 describe("citiesFor", () => {
   /**

@@ -280,10 +280,24 @@ export function contractTypesFor(
   }));
 }
 
+/**
+ * What the respondent works on.
+ *
+ * Architecture appears here *and* as a level, because the two answers are
+ * different questions and an architect had no honest answer to either one
+ * before. This screen asks about the work; `LEVELS` asks about the scope. A
+ * solution architect who came up through backend can now say "architecture"
+ * without pretending to be a principal engineer on a delivery team, and one who
+ * still writes the services they design can say "backend" and "architect".
+ *
+ * The values differ (`architecture` here, `architect` there) so a row of the
+ * published CSV never has the same string in two columns meaning two things.
+ */
 export const DISCIPLINES = [
   { value: "backend", label: "Backend" },
   { value: "frontend", label: "Frontend" },
   { value: "fullstack", label: "Full-stack" },
+  { value: "architecture", label: "Architecture" },
   { value: "mobile", label: "Mobile" },
   { value: "data", label: "Data / analytics" },
   { value: "ml", label: "ML / AI" },
@@ -315,6 +329,12 @@ export const LANGUAGES = [
 /**
  * Ladder positions described by scope, not title. Titles are not comparable
  * across companies; "owns delivery of a system" is.
+ *
+ * Two of these are parallel tracks rather than rungs. Engineering manager was
+ * always one; architect is the same shape and was missing, so architects had to
+ * claim staff or principal — a rung whose description ("drives work across
+ * several teams", "sets technical direction org-wide") describes someone who is
+ * still on a delivery team. Every entry carries a hint for exactly this reason.
  */
 export const LEVELS = [
   { value: "junior", label: "Junior", hint: "Works on well-defined tasks with support" },
@@ -322,6 +342,11 @@ export const LEVELS = [
   { value: "senior", label: "Senior", hint: "Owns a system and helps others deliver" },
   { value: "staff", label: "Staff", hint: "Drives work across several teams" },
   { value: "principal", label: "Principal", hint: "Sets technical direction org-wide" },
+  {
+    value: "architect",
+    label: "Architect",
+    hint: "Designs systems other teams build, rather than delivering on one",
+  },
   { value: "manager", label: "Engineering manager", hint: "People management is the main job" },
 ] as const;
 
