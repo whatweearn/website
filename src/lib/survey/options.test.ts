@@ -39,10 +39,10 @@ describe("roles", () => {
   });
 
   /**
-   * Architecture is deliberately in both lists (a discipline and a track), and
-   * the values are deliberately different strings. If they ever collide, a row
-   * of the published CSV carries the same token in the discipline and level
-   * columns meaning two different things, and every reader has to guess.
+   * Discipline is the domain, level is the scope, and the published CSV puts
+   * them in adjacent columns. A token that appears in both columns meaning two
+   * different things leaves every reader of the dataset guessing — architecture
+   * is the near miss this guards, and it is a level (see {@link LEVELS}).
    */
   it("keeps discipline values distinct from level values", () => {
     const levels = new Set<string>(valuesOf(LEVELS));
