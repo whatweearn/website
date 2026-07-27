@@ -440,6 +440,24 @@ Two things follow for whoever picks this up:
 - **Per-country funnel data from the push is the evidence the translation question waits on**
   (§11). It only exists if the push is instrumented enough to tell where people arrived from,
   which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.
+- **Every high-reach channel gates on contributor standing, and this project has none —
+  2026-07-27.** Reddit removed six of seven posts; HN refused the Show HN the same day, on the
+  ground that the account is unknown there rather than on anything in the submission. Two
+  independent confirmations make it a pattern: these communities defend specifically against
+  arriving with a link and no history, and standing takes months, is built per channel and does
+  not transfer. The channels left open are the ones where somebody else's standing does the
+  work (newsletters and press, `outreach/newsletters/pitches.md`) or where the standing is
+  already yours (Belgium, where the controller is registered and where
+  `DAY_RATE_PUBLISH_MIN` of 25 is the lowest bar in the system). **Never evade a stated
+  restriction** — reposting to HN without the Show HN prefix would convert a conditional
+  welcome into a penalised account. Full channel table in `outreach/README.md`.
+
+  A live premise check came out of the same afternoon and is **not yet resolved**: TechPays,
+  a European salary-transparency site, has been acquired by Levels.fyi. Much of the outreach
+  copy leans on "every dataset I can find is US-shaped". Establish what Levels.fyi now
+  publishes for Europe before pitching anyone, because a well-read editor will know, and if
+  the claim is weaker the pitch has to lead on open data, published suppression rules and day
+  rates instead of on scarcity.
 - **The first seven posts went out in 28 hours and six were removed — 2026-07-27.** Two of
   those carry `removed_by_category: reddit`, which is Reddit's sitewide spam classifier rather
   than any subreddit's moderators. That is the domain-level penalty `outreach/reddit/README.md`
