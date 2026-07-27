@@ -440,6 +440,20 @@ Two things follow for whoever picks this up:
 - **Per-country funnel data from the push is the evidence the translation question waits on**
   (§11). It only exists if the push is instrumented enough to tell where people arrived from,
   which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.
+- **The first seven posts went out in 28 hours and six were removed — 2026-07-27.** Two of
+  those carry `removed_by_category: reddit`, which is Reddit's sitewide spam classifier rather
+  than any subreddit's moderators. That is the domain-level penalty `outreach/reddit/README.md`
+  opens by warning about, and the schedule it specified (one or two posts a day over four
+  weeks) was the mitigation that got skipped. **The push is paused.** Full removal log, the
+  meaning of each removal category, and the one-liner for checking a post's real status are in
+  that README; recovery modmail is in `outreach/reddit/modmail.md`.
+
+  Two things follow that outlast this incident. **A removed post looks live to its author**,
+  with no notification, so status has to be checked deliberately within an hour of posting or
+  the same mistake gets repeated six times. And **the stopping rule below could not have fired
+  correctly**: it reads response counts, and six of seven posts reached nobody, so the count
+  was measuring the spam filter rather than the pitch. A `reddit`-category removal is now its
+  own stop condition, ahead of any response threshold.
 - **The push has a stopping rule, and the metric is the best single country — 2026-07-27.**
   Phase 7 previously said the survey is worthless below ~500 responses and that reach is the
   only thing that moves it, without saying anywhere what "the push failed" looks like. A
