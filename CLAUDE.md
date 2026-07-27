@@ -440,6 +440,25 @@ Two things follow for whoever picks this up:
 - **Per-country funnel data from the push is the evidence the translation question waits on**
   (§11). It only exists if the push is instrumented enough to tell where people arrived from,
   which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.
+- **The push has a stopping rule, and the metric is the best single country — 2026-07-27.**
+  Phase 7 previously said the survey is worthless below ~500 responses and that reach is the
+  only thing that moves it, without saying anywhere what "the push failed" looks like. A
+  seeding push with no defined failure condition does not end, it just gets quieter. The rule
+  lives in `outreach/reddit/README.md` and was set at 9 responses, deliberately before the
+  numbers were interesting enough to argue with: at the end of week 2, under 5 headline-eligible
+  responses in the best single country means reach is not the bottleneck and more subreddits
+  will not fix it. **Total responses is the wrong number to steer by** — `COUNTRY_PUBLISH_MIN`
+  is per country, so a total that looks like progress can be spread thin enough to publish
+  nothing at all.
+- **No outreach draft states a count in prose — 2026-07-27.** All 35 were written on launch day
+  saying "zero responses", which stopped being true the next day. A stale figure in a draft is a
+  false claim from the one project that cannot afford them, so counts are now tokens filled from
+  `stats.json` at posting time (`pnpm outreach <sub>`, `src/lib/outreach/facts.ts`), country
+  counts use the headline-eligible population the threshold is actually applied to, and a test
+  fails the build if a number is typed back in. The seven non-English drafts declare their
+  language so the substituted count agrees with the sentence around it; those plural forms are
+  researched, not authoritative, and want the same native-speaker read as `CONTRACT_LOCAL_TERMS`
+  (§11).
 
 ---
 
