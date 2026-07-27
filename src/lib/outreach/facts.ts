@@ -251,6 +251,26 @@ const FROZEN_COUNT = [
 ];
 
 /**
+ * `<!-- outreach-standalone -->`, marking a post that links nothing.
+ *
+ * These exist because every high-reach channel gates on contributor standing
+ * and this project has none, so the only route back into Reddit is posts that
+ * are worth reading without the link (CLAUDE.md §9, `outreach/README.md`). A
+ * standalone post must **not** state where the survey stands, since quoting
+ * your own project's numbers is the thing that makes a post promotional.
+ *
+ * It is a marker rather than a filename convention because the rule it turns
+ * off is a correctness rule, and those should be switched off explicitly and
+ * visibly, in the file the reader is looking at.
+ */
+const STANDALONE = /<!--\s*outreach-standalone\s*-->/;
+
+/** Whether a draft is a no-link post rather than something that pitches. */
+export function isStandalone(markdown: string): boolean {
+  return STANDALONE.test(markdown);
+}
+
+/**
  * What is wrong with a draft, if anything. Empty means it is safe to post.
  *
  * Lives here rather than only in the test because `outreach/` is gitignored —
@@ -262,8 +282,14 @@ export function draftProblems(markdown: string): string[] {
   const problems = FROZEN_COUNT.filter((p) => p.test(markdown)).map(
     (p) => `states a count in prose (${p.source})`,
   );
-  if (!/\{\{RESPONSES(:[A-Z]{2})?\}\}/.test(markdown)) {
-    problems.push("states no count at all, and every post says where the survey stands");
+  if (isStandalone(markdown)) {
+    // The inverse rule: a standalone post that quotes the project's own
+    // numbers has stopped being standalone.
+    if (/\{\{[A-Z_]+(:[A-Z]{2})?\}\}/.test(markdown)) {
+      problems.push("is marked standalone but still states the survey's numbers");
+    }
+  } else if (!/\{\{RESPONSES(:[A-Z]{2})?\}\}/.test(markdown)) {
+    problems.push("states no count at all, and every post that pitches says where it stands");
   }
   for (const lang of declaredLanguages(markdown)) {
     if (!(lang in PHRASES)) problems.push(`declares language "${lang}", which cannot be rendered`);

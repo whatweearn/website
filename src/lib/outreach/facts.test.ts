@@ -12,6 +12,7 @@ import {
   countryResponses,
   draftProblems,
   fillOutreachTokens,
+  isStandalone,
   phraseCount,
 } from "./facts";
 import { findDrafts, readDraft } from "./drafts";
@@ -236,6 +237,22 @@ describe("draftProblems", () => {
     ]) {
       expect(draftProblems(`{{RESPONSES}} ${prose}`)).not.toEqual([]);
     }
+  });
+
+  it("lets a standalone post say nothing about the survey", () => {
+    const md = "<!-- outreach-standalone -->\nHere is how Polish umowa zlecenie works.";
+    expect(isStandalone(md)).toBe(true);
+    expect(draftProblems(md)).toEqual([]);
+  });
+
+  it("catches a standalone post that smuggles the project's numbers back in", () => {
+    const md = "<!-- outreach-standalone -->\nWe have {{RESPONSES}} so far.";
+    expect(draftProblems(md).join()).toContain("marked standalone");
+  });
+
+  it("still catches a frozen count in a standalone post", () => {
+    const md = "<!-- outreach-standalone -->\nIt has zero responses.";
+    expect(draftProblems(md).join()).toContain("states a count in prose");
   });
 
   it("catches a draft that says nothing about where the survey stands", () => {
