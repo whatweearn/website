@@ -1,5 +1,3 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -16,8 +14,9 @@ import {
   fillOutreachTokens,
   phraseCount,
 } from "./facts";
+import { findDrafts, readDraft } from "./drafts";
 
-const OUTREACH_DIR = fileURLToPath(new URL("../../../outreach/reddit", import.meta.url));
+const OUTREACH_DIR = fileURLToPath(new URL("../../../outreach", import.meta.url));
 
 function country(name: string, responses: number): CountryRow {
   return { name, currency: "EUR", responses, median: null, p25: null, p75: null };
@@ -257,11 +256,7 @@ describe("draftProblems", () => {
  * itself is a plain function tested above, and why `pnpm outreach` refuses to
  * render a draft it rejects: the check has to exist where the files do.
  */
-const posts = existsSync(OUTREACH_DIR)
-  ? readdirSync(OUTREACH_DIR)
-      .filter((f) => f.startsWith("tier-") && f.endsWith(".md"))
-      .map((name) => ({ name, body: readFileSync(join(OUTREACH_DIR, name), "utf8") }))
-  : [];
+const posts = findDrafts(OUTREACH_DIR).map((d) => ({ name: d.name, body: readDraft(d) }));
 
 describe.skipIf(posts.length === 0)("the drafts on this machine", () => {
   it("are all there", () => {

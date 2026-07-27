@@ -10,8 +10,7 @@
  * schedule the drafts are posted on.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 
 import {
   bestCountry,
@@ -19,10 +18,11 @@ import {
   fillOutreachTokens,
   phraseCount,
 } from "../src/lib/outreach/facts";
+import { findDrafts } from "../src/lib/outreach/drafts";
 import { STATS_FILE, type SiteStats, hasPublishedFigures } from "../src/lib/stats";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "../src/lib/thresholds";
 
-const DRAFTS = "outreach/reddit";
+const DRAFTS = "outreach";
 
 function loadStats(): SiteStats {
   return JSON.parse(readFileSync(STATS_FILE, "utf8")) as SiteStats;
@@ -57,20 +57,24 @@ function printStatus(stats: SiteStats): void {
 }
 
 function resolveDraft(name: string): string {
-  const file = name.endsWith(".md") ? name : `${name}.md`;
-  const available = readdirSync(DRAFTS).filter((f) => f.endsWith(".md"));
+  const available = findDrafts(DRAFTS);
+  const needle = name.toLowerCase().replace(/\.md$/, "");
 
-  const exact = available.find((f) => f === file);
-  if (exact !== undefined) return join(DRAFTS, exact);
+  // Bare names are what anyone actually types: "UK", "Poland", "show-hn".
+  const matches = available.filter((d) => d.name.toLowerCase().includes(needle));
+  if (matches.length === 1) return matches[0].path;
 
-  // Bare country names are what anyone actually types.
-  const matches = available.filter((f) => f.toLowerCase().includes(name.toLowerCase()));
-  if (matches.length === 1) return join(DRAFTS, matches[0]);
+  // An exact basename wins over a substring, so "UK" does not lose to "UKJobs".
+  const exact = matches.filter((d) => {
+    const base = (d.name.split("/").pop() ?? "").toLowerCase().replace(/\.md$/, "");
+    return base === needle || base.endsWith(`-${needle}`);
+  });
+  if (exact.length === 1) return exact[0].path;
 
   console.error(
     matches.length === 0
-      ? `No draft matching "${name}". Available:\n  ${available.join("\n  ")}`
-      : `"${name}" matches several drafts:\n  ${matches.join("\n  ")}`,
+      ? `No draft matching "${name}". Available:\n  ${available.map((d) => d.name).join("\n  ")}`
+      : `"${name}" matches several drafts:\n  ${matches.map((d) => d.name).join("\n  ")}`,
   );
   process.exit(1);
 }
