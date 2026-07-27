@@ -48,7 +48,7 @@ export default async function DataPage() {
             ? `Built from ${count(stats.totalResponses)} responses across ${count(stats.countriesCovered)} countries. Rebuilt nightly.`
             : stats.totalResponses === 0
               ? "Nothing is published yet. The first figures appear once a slice clears the threshold below."
-              : `${count(stats.totalResponses)} responses so far, across ${count(stats.countriesCovered)} countries. Nothing is published yet — the first figures appear once a slice clears the threshold below.`}
+              : `${count(stats.totalResponses)} responses so far, across ${count(stats.countriesCovered)} countries. Nothing is published yet. The first figures appear once a slice clears the threshold below.`}
         </p>
 
         <div className="mt-10">
@@ -86,7 +86,7 @@ export default async function DataPage() {
             company size, industry and experience band that appears fewer than {MIN_CELL_SIZE}{" "}
             times is withheld, cities are dropped entirely, experience is banded and pay is
             rounded to the nearest €500. That is what makes per-response rows publishable at all
-            — a raw row is a cut of one, and releasing them verbatim would break the same
+            because a raw row is a cut of one, and releasing them verbatim would break the same
             promise the {COUNTRY_PUBLISH_MIN}-response rule keeps.
           </p>
 

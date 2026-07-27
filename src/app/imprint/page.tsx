@@ -48,7 +48,7 @@ export default function ImprintPage() {
           <Section heading="Responsibility">
             <p>
               {controller.name} operates whatweearn and is the data controller for it. What that
-              means in practice — what is stored, what cannot be stored, and why — is set out on
+              means in practice (what is stored, what cannot be stored, and why) is set out on
               the <a href="/privacy" className="text-accent underline underline-offset-2">privacy page</a>.
             </p>
             <p>
@@ -70,7 +70,7 @@ export default function ImprintPage() {
           <a href={SOURCE_URL} className="text-accent underline underline-offset-2">
             public repository
           </a>
-          . If a figure looks wrong, the aggregation is open and the dataset is downloadable —
+          . If a figure looks wrong, the aggregation is open and the dataset is downloadable,
           please check it and tell us what you find.
         </p>
         <p>

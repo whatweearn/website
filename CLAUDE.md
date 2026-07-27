@@ -505,6 +505,22 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
   and no subscriber row carries a sub-day timestamp.
 - Never log request bodies.
 
+### Copy
+
+- **No em dashes in anything a visitor reads — 2026-07-27.** This reverses the earlier split
+  where `lib/share.ts` was "no dashes" and the rest of the site kept an editorial voice. There
+  were 63 in rendered strings and 328 across the outreach drafts. They are replaced by commas,
+  full stops, colons or parentheses depending on what the sentence was doing, never uniformly.
+  Comments and this file are exempt: they are read by people working on the repo, not by
+  someone deciding whether to trust a salary figure.
+- **The reason is not taste.** The site's entire argument is that a person built this and you
+  can check their working. Prose that reads as machine-generated undermines that in the one
+  way the methodology cannot answer, and it lands hardest on Reddit, which is where every
+  visitor for the foreseeable future comes from. `outreach/reddit/README.md` carries the fuller
+  rules, including the one about no sentence appearing in two posts.
+- An en dash (`–`) stays as the empty-cell marker in tables. It is typography, not punctuation
+  in a sentence.
+
 ---
 
 ## 11. Open questions

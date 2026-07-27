@@ -80,14 +80,14 @@ export function Explorer({ stats }: { stats: SiteStats }) {
               <div key={label} className="bg-surface p-5">
                 <span className="block text-xs text-ink-3">{label}</span>
                 <span className="figure-num mt-2 block text-xl font-semibold tracking-[-0.03em]">
-                  {value === null ? "—" : euro(value)}
+                  {value === null ? "–" : euro(value)}
                 </span>
               </div>
             ))}
           </div>
           <p className="text-xs text-ink-2">
             Total compensation for {describing}, from {count(cut.responses)} responses. Employees
-            on standard contracts only — B2B and freelance gross is not comparable, and
+            on standard contracts only. B2B and freelance gross is not comparable, and
             part-time is not scaled up.
           </p>
           {cut.distribution && <DistributionCard distribution={cut.distribution} />}
@@ -102,7 +102,7 @@ export function Explorer({ stats }: { stats: SiteStats }) {
           <p className="mx-auto mt-3 max-w-[46ch] text-xs leading-relaxed text-ink-2">
             {responses === 0
               ? `No ${describing} have answered. Yours would be the first.`
-              : `${count(responses)} ${describing} have answered — ${responsesUntilPublish(responses)} more and this publishes. We hold figures back below ${COUNTRY_PUBLISH_MIN} rather than print a median that could be wrong by thousands.`}
+              : `${count(responses)} ${describing} have answered, ${responsesUntilPublish(responses)} more and this publishes. We hold figures back below ${COUNTRY_PUBLISH_MIN} rather than print a median that could be wrong by thousands.`}
           </p>
           <Button href="/survey" size="sm" arrow className="mt-6">
             Add yours

@@ -129,7 +129,7 @@ export function renderEmail(content: EmailContent): { html: string; text: string
    */
   const unsubscribe = content.unsubscribeUrl
     ? `<p class="wwe-faint" style="margin:20px 0 0;font-size:12px;line-height:1.6;color:${FAINT};">
-         <a href="${esc(content.unsubscribeUrl)}" style="color:${FAINT};">Unsubscribe</a> — one click, no questions.
+         <a href="${esc(content.unsubscribeUrl)}" style="color:${FAINT};">Unsubscribe</a>, one click and no questions.
        </p>`
     : "";
 

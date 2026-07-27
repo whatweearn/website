@@ -48,13 +48,13 @@ export function withArticle(name: string): string {
 
 /** Plain-language reading of a percentile. */
 export function percentilePhrase(p: number): string {
-  if (p >= 95) return "percentile — top 5%";
-  if (p >= 90) return "percentile — top 10%";
-  if (p >= 75) return "percentile — upper quartile";
-  if (p >= 56) return "percentile — above the middle";
-  if (p >= 45) return "percentile — right on the median";
-  if (p >= 25) return "percentile — below the middle";
-  return "percentile — bottom quartile";
+  if (p >= 95) return "percentile, top 5%";
+  if (p >= 90) return "percentile, top 10%";
+  if (p >= 75) return "percentile, upper quartile";
+  if (p >= 56) return "percentile, above the middle";
+  if (p >= 45) return "percentile, right on the median";
+  if (p >= 25) return "percentile, below the middle";
+  return "percentile, bottom quartile";
 }
 
 /**

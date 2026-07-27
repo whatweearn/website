@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const MESSAGES = {
   confirmed: {
     heading: "You're on the list.",
-    body: "We'll email you once when the results publish, and once a year when the survey reopens. Nothing else, and never about your own answers — we have no way to find them.",
+    body: "We'll email you once when the results publish, and once a year when the survey reopens. Nothing else, and never about your own answers, since we have no way to find them.",
   },
   removed: {
     heading: "You're off the list.",
@@ -23,7 +23,7 @@ const MESSAGES = {
   },
   unavailable: {
     heading: "Not available right now.",
-    body: "The notification list is temporarily unreachable. Nothing was changed — try again shortly.",
+    body: "The notification list is temporarily unreachable. Nothing was changed, so try again shortly.",
   },
 } as const;
 

@@ -24,7 +24,7 @@ export function DayRates({ rows }: { rows: readonly DayRateRow[] }) {
     <section className="mt-16 border-t border-line pt-8">
       <h2 className="text-lg">Contractor day rates</h2>
       <p className="mt-3 max-w-[56ch] text-xs leading-relaxed text-ink-2">
-        Quoted per day, gross, in euro. Contractor and B2B only — an employee&rsquo;s day rate
+        Quoted per day, gross, in euro. Contractor and B2B only, because an employee&rsquo;s day rate
         is not pricing the same thing, because a contractor&rsquo;s figure carries their own
         social contributions. These are the rates as given, never an annual salary divided by
         days billed: that would fold in how much someone worked, which is the one thing a day

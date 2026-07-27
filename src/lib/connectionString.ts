@@ -43,7 +43,7 @@ export function assertConnectionString(variable: string, value: string): string 
   if (/^["']|["']$/.test(value.trim())) {
     throw new ConnectionStringError(
       variable,
-      "it still has quote characters around it — the value was copied verbatim from a shell " +
+      "it still has quote characters around it, so the value was copied verbatim from a shell " +
         "or dotenv file instead of being parsed",
     );
   }
@@ -51,7 +51,7 @@ export function assertConnectionString(variable: string, value: string): string 
   if (/\s#/.test(value)) {
     throw new ConnectionStringError(
       variable,
-      "it has a trailing comment attached — the value was copied verbatim from a dotenv file " +
+      "it has a trailing comment attached, so the value was copied verbatim from a dotenv file " +
         "instead of being parsed",
     );
   }

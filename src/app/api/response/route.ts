@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       {
         error:
           turnstile.reason === "missing_token"
-            ? "Your browser never completed the Cloudflare check, so we cannot accept this yet. It is almost always an extension or network filter blocking challenges.cloudflare.com. Your answers are saved on this device — allow that domain, reload, and they will still be here."
+            ? "Your browser never completed the Cloudflare check, so we cannot accept this yet. It is almost always an extension or network filter blocking challenges.cloudflare.com. Your answers are saved on this device, so allow that domain, reload, and they will still be here."
             : "We could not confirm this submission came from a browser. Please try again.",
       },
       { status: 403 },

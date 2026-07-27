@@ -233,7 +233,7 @@ export function draftProblems(markdown: string): string[] {
     (p) => `states a count in prose (${p.source})`,
   );
   if (!/\{\{RESPONSES(:[A-Z]{2})?\}\}/.test(markdown)) {
-    problems.push("states no count at all — every post says where the survey stands");
+    problems.push("states no count at all, and every post says where the survey stands");
   }
   for (const lang of declaredLanguages(markdown)) {
     if (!(lang in PHRASES)) problems.push(`declares language "${lang}", which cannot be rendered`);

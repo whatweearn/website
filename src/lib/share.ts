@@ -17,9 +17,12 @@
  * against a number they are otherwise guessing at, on the side of a table
  * where the other party is not guessing at all.
  *
- * House style for this file only: short plain sentences, no dashes, nothing
- * that reads as written by a brand. The rest of the site has an editorial
- * voice. A person forwarding this to their team channel does not.
+ * House style: short plain sentences, no dashes, nothing that reads as written
+ * by a brand. A person forwarding this to their team channel does not have an
+ * editorial voice.
+ *
+ * This was the only file under that rule until 2026-07-27, when it was applied
+ * to every string a visitor reads. See CLAUDE.md §10.
  */
 
 import { withArticle } from "./format";

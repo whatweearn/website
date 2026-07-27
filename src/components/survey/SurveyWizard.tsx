@@ -208,7 +208,7 @@ export function SurveyWizard({
             />
           </Field>
           {country && (
-            <Field label="City" htmlFor="city" hint="Pick the nearest — pay varies a lot within a country.">
+            <Field label="City" htmlFor="city" hint="Pick the nearest. Pay varies a lot within a country.">
               <Select
                 name="city"
                 value={(draft.city as string) ?? ""}
@@ -305,7 +305,7 @@ export function SurveyWizard({
     },
     {
       title: "How senior are you?",
-      hint: "Pick by what you do, not by your title — titles are not comparable between companies.",
+      hint: "Pick by what you do, not by your title. Titles are not comparable between companies.",
       body: (
         <>
           <Choice
@@ -380,7 +380,7 @@ export function SurveyWizard({
             <Field
               label="Days you billed last year"
               htmlFor="daysPerYear"
-              hint="Actual billed days, not a target — we multiply by this rather than guess a working year."
+              hint="Actual billed days, not a target. We multiply by this rather than guess a working year."
               required
             >
               <NumberField
@@ -439,7 +439,7 @@ export function SurveyWizard({
     },
     {
       title: "Any equity?",
-      hint: "Annualised value. Skip if none — most people have none, and that is useful to know.",
+      hint: "Annualised value. Skip if none. Most people have none, and that is useful to know.",
       body: (
         <>
           <MoneyField
@@ -594,7 +594,7 @@ export function SurveyWizard({
               <b className="font-semibold text-ink">We could not check your browser.</b> This is
               almost always a privacy extension or network filter blocking{" "}
               <code className="font-mono">challenges.cloudflare.com</code>. Allow it and try
-              again — your answers are still here.
+              again. Your answers are still here.
               <button
                 type="button"
                 onClick={() => {
@@ -619,7 +619,7 @@ export function SurveyWizard({
           reminder afterwards. */}
       <p className="mt-12 border-t border-line pt-6 text-xs leading-relaxed text-ink-3">
         Nothing here identifies you. Because of that, we cannot delete one particular response
-        later — we would have no way to tell which one is yours.
+        later. We would have no way to tell which one is yours.
       </p>
     </div>
   );

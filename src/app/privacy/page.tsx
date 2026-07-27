@@ -42,7 +42,7 @@ export default function PrivacyPage() {
       <Section heading="Survey answers are anonymous, not pseudonymous">
         <p>
           There is no account, no login and no identifier of any kind attached to a response.
-          When you submit, the server stores your answers and returns nothing — no id, no token,
+          When you submit, the server stores your answers and returns nothing: no id, no token,
           no receipt. There is deliberately no value you could later present to us that would
           point at your row.
         </p>
@@ -70,8 +70,8 @@ export default function PrivacyPage() {
       <Section heading="Every answer is a bounded choice">
         <p>
           There is no free-text field anywhere in the survey. Every question is a list to pick
-          from or a number, which means nothing personal can end up in the dataset by accident —
-          not a name typed into a comment box, not an employer mentioned in passing.
+          from or a number, which means nothing personal can end up in the dataset by accident.
+          Not a name typed into a comment box, not an employer mentioned in passing.
         </p>
         <p>
           We never ask who you work for. Company size bracket and industry only.
@@ -84,18 +84,18 @@ export default function PrivacyPage() {
           stored in a <b>physically separate database</b> with its own credentials, in a
           separate provider account. There is no key, no timestamp and no shared value
           connecting the two, and no code in this project is permitted to open both
-          connections — an automated test fails the build if any module tries.
+          connections. An automated test fails the build if any module tries.
         </p>
         <p>
           Both databases record dates rather than timestamps, signups are recorded only to the
-          week, and the subscriber table uses random identifiers rather than sequential ones —
+          week, and the subscriber table uses random identifiers rather than sequential ones,
           so a signup and a response cannot be matched by when they arrived or by the order
           they were written in.
         </p>
         <p>
           The consequence is worth stating plainly: <b>we can never email you about your own
           answers</b>. Not as a policy, but because we genuinely cannot find them. Your address
-          is used for two things — telling you when results publish, and telling you when the
+          is used for two things: telling you when results publish, and telling you when the
           survey reopens.
         </p>
         <p>
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
           items={[
             [
               "Your email address",
-              "Unsubscribe from any email, or ask us — we will delete it and confirm.",
+              "Unsubscribe from any email, or ask us. We will delete it and confirm.",
             ],
             [
               "Your survey response",
@@ -146,7 +146,7 @@ export default function PrivacyPage() {
             ],
             [
               "Hosting",
-              "The site and both databases run in the EU. No analytics, no advertising, no tracking scripts, and no cookies — which is why there is no cookie banner.",
+              "The site and both databases run in the EU. No analytics, no advertising, no tracking scripts, and no cookies, which is why there is no cookie banner.",
             ],
           ]}
         />
@@ -154,15 +154,21 @@ export default function PrivacyPage() {
 
       <Section heading="Complaining">
         <p>
-          If you think we have handled personal data badly, tell us first —{" "}
+          {/* Each branch carries its own preposition, because "tell us first at
+              once a contact address is configured" is what happens when the
+              wording lives outside the conditional. */}
+          If you think we have handled personal data badly, tell us first{" "}
           {controller ? (
-            <a href={`mailto:${controller.email}`} className="text-accent underline underline-offset-2">
-              {controller.email}
-            </a>
+            <>
+              at{" "}
+              <a href={`mailto:${controller.email}`} className="text-accent underline underline-offset-2">
+                {controller.email}
+              </a>
+            </>
           ) : (
             "once a contact address is configured"
-          )}{" "}
-          — and we will answer.
+          )}
+          , and we will answer.
         </p>
         {authority ? (
           <p>
