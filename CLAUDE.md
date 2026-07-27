@@ -452,12 +452,13 @@ Two things follow for whoever picks this up:
   restriction** — reposting to HN without the Show HN prefix would convert a conditional
   welcome into a penalised account. Full channel table in `outreach/README.md`.
 
-  A live premise check came out of the same afternoon and is **not yet resolved**: TechPays,
-  a European salary-transparency site, has been acquired by Levels.fyi. Much of the outreach
-  copy leans on "every dataset I can find is US-shaped". Establish what Levels.fyi now
-  publishes for Europe before pitching anyone, because a well-read editor will know, and if
-  the claim is weaker the pitch has to lead on open data, published suppression rules and day
-  rates instead of on scarcity.
+  **Resolved the same day, in the project's favour: TechPays was acquired by Levels.fyi and
+  has taken no new data since 2024.** The worry was that "every dataset I can find is
+  US-shaped" had stopped being true. What happened instead is that the one serious European
+  salary-transparency project was absorbed and stopped collecting, so the gap reopened. Use the
+  specific version in outreach copy rather than the sweeping one: a named project, a named
+  acquirer and a date are checkable, where "everything is US-shaped" is the kind of claim a
+  well-read editor discounts on sight.
 - **The first seven posts went out in 28 hours and six were removed — 2026-07-27.** Two of
   those carry `removed_by_category: reddit`, which is Reddit's sitewide spam classifier rather
   than any subreddit's moderators. That is the domain-level penalty `outreach/reddit/README.md`
