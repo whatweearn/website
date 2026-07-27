@@ -85,6 +85,21 @@ describe("implausibilities", () => {
     );
   });
 
+  /**
+   * Architect is a track, not a rung, so nothing about it implies experience by
+   * construction the way the ladder does. The check that catches a two-year
+   * principal has to catch a two-year architect as well, or the parallel track
+   * becomes the way round it.
+   */
+  it("flags a short career on either of the senior tracks", () => {
+    for (const level of ["principal", "architect"] as const) {
+      expect(
+        implausibilities({ ...minimal, level, yearsExperience: 2 }),
+        `${level} was not flagged`,
+      ).toContain("senior_level_with_short_tenure");
+    }
+  });
+
   it("flags an annual figure that is too low to be one", () => {
     expect(implausibilities({ ...minimal, baseSalary: 2_500 })).toContain(
       "annual_pay_unusually_low",

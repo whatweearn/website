@@ -49,6 +49,16 @@ Settled. Do not reopen without updating this file.
    more common reasons journalists cite them. If that becomes a goal, it is a v2 schema change
    plus a fresh consent story — retrofitting it onto existing responses is impossible. No
    demographic fields of any kind ship in v1.
+5. **Engineering roles only, and architects are an engineering role — 2026-07-26.** Architect was
+   added as a level (§5 screen 5). Wider IT — sysadmin, networking, DBA, IT
+   support, technical BA — was considered and declined for now, on data grounds rather than
+   snobbery: **headline medians are cut by country and level, not by discipline**, so a helpdesk
+   salary would move the number this site presents as engineer pay with nothing downstream able
+   to detect it. The machinery to admit those roles honestly already exists — the eligibility
+   rule that keeps B2B and part-timers out of headline figures and gives them their own cut
+   (`src/lib/stats/eligibility.ts`) — so if this is ever wanted, the work is that rule plus the
+   audience copy in `layout.tsx`, `app/data/page.tsx` and `lib/share.ts`. Adding the options
+   alone is the one approach that is wrong.
 
 ---
 
@@ -199,12 +209,22 @@ bounded choice or a number — no free text.
 | 1 | Where | Country (select), city (select of majors + "elsewhere in country") | City drives huge variance |
 | 2 | Work setup | On-site / hybrid / remote-domestic / remote-international; is pay location-adjusted? | |
 | 3 | Contract | Permanent / fixed-term / contractor / B2B; FTE % | **Essential.** See above |
-| 4 | Role | Discipline (backend/frontend/full-stack/data/ML/infra/mobile/embedded/security/QA); primary language | |
+| 4 | Role | Discipline (backend/frontend/full-stack/data/ML/infra/mobile/embedded/security/QA); primary language | Domain, not job. Architecture is a level, not a discipline |
 | 5 | Seniority | Level (ladder with descriptions, not titles); years writing software professionally | Titles are not comparable across companies; descriptions are |
 | 6 | Base salary | Amount + currency + period (year/month/day/hour), plus the multiplier that period needs | Freelancers think in day rates; forcing an annual figure made them guess a working year |
 | 7 | Bonus | Amount actually paid last 12 months (0 allowed) | "Actually paid", never target |
 | 8 | Equity | Annualised value; company public/private | Optional. Skip = no equity |
 | 9 | Company | Headcount bracket; industry | No name, ever |
+
+**Architect is a level, not a discipline — 2026-07-26.** The ladder described someone delivering
+on a team ("drives work across several teams", "sets technical direction org-wide"), so an
+architect had to claim staff or principal. Engineering manager was already a parallel track and
+architect is the same shape, so it sits beside it. It is deliberately *not* also a discipline:
+that screen asks for the technical domain, an architect still has one, and listing architecture
+in both places would split architects across two answers meaning the same thing — every cut
+thinner, nothing gained. `options.test.ts` asserts no value appears in both lists, since the
+published CSV puts discipline and level in adjacent columns and a shared token there would mean
+two different things in one row.
 
 No demographic questions in v1 (§2.4). The survey ends at screen 9; the email prompt lives on
 the confirmation page *after* submission, never inside the survey payload.

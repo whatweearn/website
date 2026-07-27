@@ -115,6 +115,13 @@ export const submissionSchema = z.object({
 export type Submission = z.infer<typeof submissionSchema>;
 
 /**
+ * Levels nobody reaches in a couple of years, whichever track they are on.
+ * Architect belongs here for the same reason principal does; it is listed
+ * separately from the ladder because it is one (see {@link LEVELS}).
+ */
+const DEEP_EXPERIENCE_LEVELS: ReadonlySet<string> = new Set(["principal", "architect"]);
+
+/**
  * Cross-field checks that flag rather than block.
  *
  * A junior with 18 years' experience is more likely a mis-tap than a lie, and
@@ -128,8 +135,8 @@ export function implausibilities(response: SurveyResponse): string[] {
   if (response.level === "junior" && (response.yearsExperience ?? 0) > 12) {
     flags.push("junior_with_long_tenure");
   }
-  if (response.level === "principal" && (response.yearsExperience ?? 99) < 3) {
-    flags.push("principal_with_short_tenure");
+  if (DEEP_EXPERIENCE_LEVELS.has(response.level) && (response.yearsExperience ?? 99) < 3) {
+    flags.push("senior_level_with_short_tenure");
   }
   // Was a bare `baseSalary < 3_000`, which is currency-blind: 3,000 forint is
   // about €7.50, so an ordinary Hungarian salary passed and a normal euro

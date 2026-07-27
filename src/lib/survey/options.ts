@@ -280,6 +280,15 @@ export function contractTypesFor(
   }));
 }
 
+/**
+ * What the respondent works on — the technical domain, not the job.
+ *
+ * Architecture is deliberately absent: it is a level, because it describes
+ * scope rather than subject matter. An architect still came up through, and
+ * usually still works in, one of these. Listing it in both places would split
+ * architects across two answers that mean the same thing, and every cut would
+ * thin out for no gain.
+ */
 export const DISCIPLINES = [
   { value: "backend", label: "Backend" },
   { value: "frontend", label: "Frontend" },
@@ -315,6 +324,12 @@ export const LANGUAGES = [
 /**
  * Ladder positions described by scope, not title. Titles are not comparable
  * across companies; "owns delivery of a system" is.
+ *
+ * Two of these are parallel tracks rather than rungs. Engineering manager was
+ * always one; architect is the same shape and was missing, so architects had to
+ * claim staff or principal — a rung whose description ("drives work across
+ * several teams", "sets technical direction org-wide") describes someone who is
+ * still on a delivery team. Every entry carries a hint for exactly this reason.
  */
 export const LEVELS = [
   { value: "junior", label: "Junior", hint: "Works on well-defined tasks with support" },
@@ -322,6 +337,11 @@ export const LEVELS = [
   { value: "senior", label: "Senior", hint: "Owns a system and helps others deliver" },
   { value: "staff", label: "Staff", hint: "Drives work across several teams" },
   { value: "principal", label: "Principal", hint: "Sets technical direction org-wide" },
+  {
+    value: "architect",
+    label: "Architect",
+    hint: "Designs systems other teams build, rather than delivering on one",
+  },
   { value: "manager", label: "Engineering manager", hint: "People management is the main job" },
 ] as const;
 
