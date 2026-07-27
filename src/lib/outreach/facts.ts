@@ -19,7 +19,13 @@
 
 import type { SiteStats } from "../stats";
 import { COUNTRIES } from "../survey/options";
-import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "../thresholds";
+import {
+  COUNTRY_PUBLISH_MIN,
+  DAY_RATE_PUBLISH_MIN,
+  MIN_CELL_SIZE,
+  dayRatesUntilPublish,
+  responsesUntilPublish,
+} from "../thresholds";
 
 /**
  * `{{NAME}}` or `{{NAME:BE}}`.
@@ -144,6 +150,22 @@ export function countryResponses(stats: SiteStats, code: string): number {
   return stats.countries.find((c) => c.name === name)?.responses ?? 0;
 }
 
+/**
+ * Day rates quoted for one country.
+ *
+ * A separate population from {@link countryResponses} and a separate threshold,
+ * because the unit is different: these are euro per day, and
+ * {@link DAY_RATE_PUBLISH_MIN} is lower than {@link COUNTRY_PUBLISH_MIN} for
+ * the statistical reason set out in `thresholds.ts`, not as a concession to low
+ * volume. A post to a freelance sub is the one place that distinction is the
+ * whole argument, so it gets its own tokens rather than being approximated.
+ */
+export function countryDayRates(stats: SiteStats, code: string): number {
+  const name = COUNTRY_NAMES.get(code);
+  if (name === undefined) return 0;
+  return stats.dayRates?.find((c) => c.name === name)?.responses ?? 0;
+}
+
 /** A count as it appears mid-sentence, in the post's own language. */
 export function phraseCount(n: number, lang = "en"): string {
   return (PHRASES[lang] ?? PHRASES.en)(n);
@@ -173,6 +195,14 @@ export function fillOutreachTokens(markdown: string, stats: SiteStats): FilledPo
         case "NEEDS":
           if (code === undefined) break;
           return String(responsesUntilPublish(countryResponses(stats, code)));
+        case "DAY_RATES":
+          if (code === undefined) break;
+          return String(countryDayRates(stats, code));
+        case "DAY_RATES_NEEDED":
+          if (code === undefined) break;
+          return String(dayRatesUntilPublish(countryDayRates(stats, code)));
+        case "DAY_RATE_MIN":
+          return String(DAY_RATE_PUBLISH_MIN);
         case "PUBLISH_MIN":
           return String(COUNTRY_PUBLISH_MIN);
         case "MIN_CELL":

@@ -10,6 +10,7 @@ import {
   OUTREACH_LANGUAGES,
   bareCount,
   bestCountry,
+  countryDayRates,
   countryResponses,
   draftProblems,
   fillOutreachTokens,
@@ -22,12 +23,17 @@ function country(name: string, responses: number): CountryRow {
   return { name, currency: "EUR", responses, median: null, p25: null, p75: null };
 }
 
-function stats(countries: CountryRow[], totalResponses = 0): SiteStats {
+function stats(
+  countries: CountryRow[],
+  totalResponses = 0,
+  dayRates: { name: string; responses: number }[] = [],
+): SiteStats {
   return {
     totalResponses,
     countriesCovered: countries.length,
     europe: null,
     countries,
+    dayRates: dayRates.map((d) => ({ ...d, median: null, p25: null, p75: null })),
     cuts: {},
   };
 }
@@ -101,8 +107,23 @@ describe("countryResponses", () => {
   });
 });
 
+describe("countryDayRates", () => {
+  it("reads a separate population from the salary count", () => {
+    const s = stats([country("Belgium", 4)], 9, [{ name: "Belgium", responses: 7 }]);
+    expect(countryDayRates(s, "BE")).toBe(7);
+    expect(countryResponses(s, "BE")).toBe(4);
+  });
+
+  it("is zero for a country with no quoted rates, and for stats.json without the field", () => {
+    expect(countryDayRates(stats([country("Belgium", 4)], 9), "BE")).toBe(0);
+    expect(countryDayRates(stats([], 0, [{ name: "Poland", responses: 3 }]), "BE")).toBe(0);
+  });
+});
+
 describe("fillOutreachTokens", () => {
-  const live = stats([country("Belgium", 4), country("Poland", 11)], 9);
+  const live = stats([country("Belgium", 4), country("Poland", 11)], 9, [
+    { name: "Belgium", responses: 7 },
+  ]);
 
   it("fills the survey-wide count", () => {
     expect(fillOutreachTokens("It has {{RESPONSES}} in it.", live).text).toBe(
@@ -143,6 +164,16 @@ describe("fillOutreachTokens", () => {
       "Currently {{RESPONSES}}.",
     ].join("\n");
     expect(fillOutreachTokens(md, live).text).toBe("Aktuell 9 Antworten.\nCurrently 9 responses.");
+  });
+
+  it("fills the day-rate count, its gap and its own threshold", () => {
+    const out = fillOutreachTokens("{{DAY_RATES:BE}} of {{DAY_RATE_MIN}}, {{DAY_RATES_NEEDED:BE}} to go", live);
+    expect(out.text).toBe("7 of 25, 18 to go");
+  });
+
+  it("does not confuse the day-rate threshold with the salary one", () => {
+    const out = fillOutreachTokens("{{DAY_RATE_MIN}} vs {{PUBLISH_MIN}}", live);
+    expect(out.text).toBe("25 vs 60");
   });
 
   it("quotes the thresholds from the constants rather than the draft", () => {
