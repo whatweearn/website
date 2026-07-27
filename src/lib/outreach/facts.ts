@@ -33,7 +33,7 @@ const TOKEN = /\{\{([A-Z_]+)(?::([A-Z]{2}))?\}\}/g;
 /**
  * `<!-- outreach-lang: de -->`, switching language from that point on.
  *
- * Positional rather than a per-file property because the seven non-English
+ * Positional rather than a per-file property because the eight native-language
  * drafts each carry an "English reference — do not post" block for a
  * moderator's benefit, and a file-wide setting would render "9 Antworten" into
  * the middle of it. Per *token* tagging was the other option and is worse: it
@@ -79,6 +79,10 @@ const PHRASES: Record<string, (n: number) => string> = {
   es: (n) => (n === 0 ? "cero respuestas" : n === 1 ? "una respuesta" : `${n} respuestas`),
   it: (n) => (n === 0 ? "zero risposte" : n === 1 ? "una risposta" : `${n} risposte`),
   pt: (n) => (n === 0 ? "zero respostas" : n === 1 ? "uma resposta" : `${n} respostas`),
+  // Polish: the nominative plural (2–4) and the genitive plural (5+) of
+  // "odpowiedź" are both "odpowiedzi", so one plural form covers everything
+  // above one.
+  pl: (n) => (n === 0 ? "zero odpowiedzi" : n === 1 ? "jedna odpowiedź" : `${n} odpowiedzi`),
   // Romanian inserts "de" before the noun once the last two digits reach 20:
   // 19 răspunsuri, but 20 de răspunsuri, and 101 răspunsuri again.
   ro: (n) => {
@@ -105,6 +109,7 @@ const BARE: Record<string, (n: number) => string> = {
   es: (n) => (n === 0 ? "ninguna" : n === 1 ? "una" : String(n)),
   it: (n) => (n === 0 ? "nessuna" : n === 1 ? "una" : String(n)),
   pt: (n) => (n === 0 ? "nenhuma" : n === 1 ? "uma" : String(n)),
+  pl: (n) => (n === 0 ? "żadnej" : n === 1 ? "jedna" : String(n)),
   ro: (n) => (n === 0 ? "niciunul" : n === 1 ? "unul" : String(n)),
 };
 
@@ -212,6 +217,7 @@ const FROZEN_COUNT = [
   /\bzero risposte\b/i,
   /\bzero respostas\b/i,
   /\bzero răspunsuri\b/i,
+  /\bzero odpowiedzi\b/i,
 ];
 
 /**
