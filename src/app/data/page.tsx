@@ -2,19 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CountryProgress } from "@/components/CountryProgress";
-import { DayRates } from "@/components/DayRates";
 import { Explorer } from "@/components/Explorer";
 import { Share } from "@/components/Share";
 import { SubscribeForm } from "@/components/SubscribeForm";
 import { Container } from "@/components/ui";
 import { count } from "@/lib/format";
 import { INVITE_MESSAGE } from "@/lib/share";
-import {
-  countriesNearingPublication,
-  dayRatesByCountry,
-  getSiteStats,
-  hasPublishedFigures,
-} from "@/lib/stats";
+import { countriesNearingPublication, getSiteStats, hasPublishedFigures } from "@/lib/stats";
 import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "@/lib/thresholds";
 
 export const metadata: Metadata = {
@@ -36,7 +30,9 @@ export default async function DataPage() {
           <span aria-hidden="true">←</span> whatweearn
         </Link>
 
-        <h1 className="mt-8 max-w-[16ch] text-2xl tracking-[-0.034em]">What engineers earn.</h1>
+        <h1 className="mt-8 max-w-[18ch] text-2xl tracking-[-0.034em]">
+          What engineers earn, and what contractors charge.
+        </h1>
         {/* Gated on whether anything has *published*, not on whether anyone has
             answered. Those stopped being the same thing the moment the first
             response arrived: with responses in hand but every slice still under
@@ -54,8 +50,6 @@ export default async function DataPage() {
         <div className="mt-10">
           <Explorer stats={stats} />
         </div>
-
-        <DayRates rows={dayRatesByCountry(stats)} />
 
         <CountryProgress countries={nearing} />
 

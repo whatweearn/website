@@ -127,13 +127,13 @@ export type ContractType = (typeof CONTRACT_TYPES)[number]["value"];
  *
  * This is a data-quality measure, not a translation. The generic English
  * labels describe four categories accurately and still fail in practice,
- * because the boundary that decides whether a response reaches a headline
- * median — employee versus not — is drawn by *local* law under local names.
- * Somebody on a Polish umowa zlecenie or an Italian co.co.co. is not an
- * employee, but "Fixed-term employee" reads like a fair description of their
- * situation. Picking it puts a non-employee gross figure into the employees-
- * only median, which is precisely the contamination {@link isHeadlineEligible}
- * exists to prevent, and nothing downstream can detect it.
+ * because the boundary that decides which figures a response joins — employee
+ * versus not — is drawn by *local* law under local names. Somebody on a Polish
+ * umowa zlecenie or an Italian co.co.co. is not an employee, but "Fixed-term
+ * employee" reads like a fair description of their situation. Picking it puts
+ * a non-employee gross figure into the employee median, which is precisely the
+ * contamination {@link populationOf} keeps the two populations apart to
+ * prevent, and nothing downstream can detect it.
  *
  * Only the hint changes. Values are never localised: the stored answer is the
  * same token whatever the respondent read, so the dataset stays language-
@@ -145,9 +145,9 @@ export type ContractType = (typeof CONTRACT_TYPES)[number]["value"];
  * Switzerland is deliberately absent — it has three working languages and
  * picking one would mislead the other two.
  *
- * TODO before launch: these need review by a native speaker per country. They
- * are researched, not authoritative, and a mistranslated contract form here
- * corrupts the headline figure silently.
+ * TODO: these need review by a native speaker per country. They are
+ * researched, not authoritative, and a mistranslated contract form here
+ * silently moves a response into the wrong population.
  */
 export const CONTRACT_LOCAL_TERMS: Partial<
   Record<CountryCode, Partial<Record<ContractType, string>>>

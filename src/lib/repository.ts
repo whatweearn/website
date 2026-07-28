@@ -1,6 +1,6 @@
 import { hasDatabase } from "./db/client";
 import { PostgresResponseRepository } from "./db/responseRepository";
-import { isDayRateEligible, isHeadlineEligible } from "./stats/eligibility";
+import { type Population, populationOf } from "./stats/populations";
 import type { SurveyResponse } from "./survey/schema";
 
 /**
@@ -36,15 +36,7 @@ export interface ResponseRepository {
    * already published on the data page, and a count is not a figure that
    * manipulation could chase.
    */
-  countForCountry(country: string): Promise<number>;
-  /**
-   * How many quoted contractor day rates a country has right now.
-   *
-   * The confirmation screen needs it for the same reason it needs the headline
-   * count: a contractor's answer is deliberately absent from that one, so it
-   * is the only cut that can honestly tell them where their answer landed.
-   */
-  countDayRatesForCountry(country: string): Promise<number>;
+  countByPopulation(country: string): Promise<Record<Population, number>>;
 }
 
 /**
@@ -65,30 +57,21 @@ class InMemoryRepository implements ResponseRepository {
     return this.handles.has(handle);
   }
 
-  async countForCountry(country: string): Promise<number> {
+  async countByPopulation(country: string): Promise<Record<Population, number>> {
     // Same rule as Postgres. Divergence between the two implementations is
     // what let the last storage bug through, since the suite exercises this
     // one and production runs the other.
-    return this.records.filter(
-      (r) =>
-        r.response.country === country &&
-        isHeadlineEligible({
-          contractType: r.response.contractType,
-          ftePercent: r.response.ftePercent ?? null,
-        }),
-    ).length;
-  }
-
-  async countDayRatesForCountry(country: string): Promise<number> {
-    return this.records.filter(
-      (r) =>
-        r.response.country === country &&
-        isDayRateEligible({
-          contractType: r.response.contractType,
-          ftePercent: r.response.ftePercent ?? null,
-          salaryPeriod: r.response.salaryPeriod ?? null,
-        }),
-    ).length;
+    const counts = { employee: 0, part_time: 0, contractor: 0 };
+    for (const record of this.records) {
+      if (record.response.country !== country) continue;
+      counts[
+        populationOf({
+          contractType: record.response.contractType,
+          ftePercent: record.response.ftePercent ?? null,
+        })
+      ] += 1;
+    }
+    return counts;
   }
 
   /** Test seam. */

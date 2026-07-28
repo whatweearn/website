@@ -4,12 +4,7 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import {
-  EMPLOYEE_CONTRACTS,
-  MIN_FTE_PERCENT,
-  isDayRateEligible,
-  isHeadlineEligible,
-} from "../stats/eligibility";
+import { EMPLOYEE_CONTRACTS, MIN_FTE_PERCENT, populationOf } from "../stats/populations";
 import { annualise } from "../survey/annualise";
 import { AGGREGATE_SELECT_LIST, AGGREGATE_WHERE } from "./responseRepository";
 
@@ -203,17 +198,17 @@ describe("fx_rates", () => {
   });
 });
 
-describe("headline eligibility in SQL", () => {
+describe("populations in SQL", () => {
   /**
    * The rule exists twice: in TypeScript for the nightly aggregation, and in
-   * SQL for the live count behind "Germany needs 47 more before its median
-   * publishes". This asserts the two agree on every combination, because the
+   * SQL for the live counts behind "21 more and Italy's contractor day rates
+   * publish". This asserts the two agree on every combination, because the
    * failure is silent — the site makes a promise and the aggregation declines
    * to keep it.
    *
-   * Deliberately compares against `isHeadlineEligible` rather than a
-   * hand-written expected number, so adding a condition to the rule and
-   * forgetting the query fails here.
+   * Deliberately compares against `populationOf` rather than hand-written
+   * expected numbers, so adding a condition to the rule and forgetting the
+   * query fails here.
    */
   const cases: { contractType: string; ftePercent: number | null }[] = [
     { contractType: "permanent", ftePercent: null },
@@ -241,86 +236,36 @@ describe("headline eligibility in SQL", () => {
     }
   });
 
-  it("counts exactly the responses the aggregation would publish on", async () => {
-    const rows = await db.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM responses
-       WHERE country = $1
-         AND superseded_by IS NULL
-         AND excluded_reason IS NULL
-         AND contract_type = ANY($2)
-         AND (fte_percent IS NULL OR fte_percent >= $3)`,
+  it("splits the responses exactly as the aggregation does", async () => {
+    const rows = await db.query<{ employee: number; part_time: number; contractor: number }>(
+      `SELECT
+         count(*) FILTER (WHERE contract_type = ANY($2)
+                            AND (fte_percent IS NULL OR fte_percent >= $3))::int     AS employee,
+         count(*) FILTER (WHERE contract_type = ANY($2)
+                            AND NOT (fte_percent IS NULL OR fte_percent >= $3))::int AS part_time,
+         count(*) FILTER (WHERE NOT (contract_type = ANY($2)))::int                  AS contractor
+       FROM responses
+       WHERE country = $1 AND superseded_by IS NULL AND excluded_reason IS NULL`,
       [COUNTRY, [...EMPLOYEE_CONTRACTS], MIN_FTE_PERCENT],
     );
 
-    const expected = cases.filter(isHeadlineEligible).length;
-    expect(rows.rows[0]!.n).toBe(expected);
-    // Guards the test itself: if every case were eligible the assertion above
-    // would pass while proving nothing.
-    expect(expected).toBeGreaterThan(0);
-    expect(expected).toBeLessThan(cases.length);
+    const expected = { employee: 0, part_time: 0, contractor: 0 };
+    for (const c of cases) expected[populationOf(c)] += 1;
+
+    expect(rows.rows[0]).toEqual(expected);
+    // Guards the test itself: a split that put everything in one bucket would
+    // satisfy the assertion above while proving nothing.
+    for (const population of ["employee", "part_time", "contractor"] as const) {
+      expect(expected[population]).toBeGreaterThan(0);
+    }
   });
 
-  it("excludes B2B, freelance and part-time rows rather than deleting them", async () => {
-    // They stay in the table and reach the dataset and their own cut. The
-    // headline count is the only place they are held back.
+  it("accounts for every stored row, leaving none in no population at all", async () => {
     const stored = await db.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM responses WHERE country = $1`,
       [COUNTRY],
     );
     expect(stored.rows[0]!.n).toBe(cases.length);
-  });
-});
-
-describe("day-rate eligibility in SQL", () => {
-  /**
-   * The same two-implementations problem as the headline count above, and it
-   * reaches the same screen: the confirmation tells a contractor how close
-   * their country's day-rate median is, so this query and
-   * {@link isDayRateEligible} have to agree on which answers are in it.
-   */
-  const cases: { contractType: string; salaryPeriod: string | null }[] = [
-    { contractType: "contractor", salaryPeriod: "day" },
-    { contractType: "b2b", salaryPeriod: "day" },
-    { contractType: "contractor", salaryPeriod: "year" },
-    { contractType: "contractor", salaryPeriod: "hour" },
-    { contractType: "contractor", salaryPeriod: null },
-    // An employee quoting a day rate is not pricing the same thing.
-    { contractType: "permanent", salaryPeriod: "day" },
-    { contractType: "fixed_term", salaryPeriod: "day" },
-  ];
-
-  // Its own code: these rows share a table with every other block's, and the
-  // aggregation test below reads row zero of "YY".
-  const COUNTRY = "XX";
-
-  beforeAll(async () => {
-    for (const [i, c] of cases.entries()) {
-      await db.query(
-        `INSERT INTO responses
-           (submitted_on, handle, country, contract_type, salary_period, level, base_salary, currency)
-         VALUES ('2026-07-24', $1, $2, $3, $4, 'senior', 650, 'EUR')`,
-        [`day-rate-${i}`, COUNTRY, c.contractType, c.salaryPeriod],
-      );
-    }
-  });
-
-  it("counts exactly the rates the contractor cut would publish on", async () => {
-    const rows = await db.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM responses
-       WHERE country = $1
-         AND superseded_by IS NULL
-         AND excluded_reason IS NULL
-         AND NOT (contract_type = ANY($2))
-         AND salary_period = 'day'`,
-      [COUNTRY, [...EMPLOYEE_CONTRACTS]],
-    );
-
-    const expected = cases.filter((c) =>
-      isDayRateEligible({ contractType: c.contractType, ftePercent: null, salaryPeriod: c.salaryPeriod }),
-    ).length;
-    expect(rows.rows[0]!.n).toBe(expected);
-    expect(expected).toBeGreaterThan(0);
-    expect(expected).toBeLessThan(cases.length);
   });
 });
 

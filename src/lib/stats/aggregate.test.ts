@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
+import { findCut } from "../stats";
+import { COUNTRY_PUBLISH_MIN, DAY_RATE_PUBLISH_MIN, MIN_CELL_SIZE } from "../thresholds";
 
-import { DAY_RATE_PUBLISH_MIN } from "../thresholds";
-import { type AggregateRow, aggregate, isHeadlineEligible } from "./aggregate";
+import { type AggregateRow, aggregate } from "./aggregate";
+import { STANDARD_BILLED_DAYS } from "./dayRate";
 
 const RATES = { EUR: 1, PLN: 4.3, CHF: 0.95, GBP: 0.84 };
 
@@ -21,38 +22,26 @@ function rows(count: number, overrides: Partial<AggregateRow> = {}): AggregateRo
   }));
 }
 
-describe("headline eligibility", () => {
-  it("includes employees on standard contracts", () => {
-    expect(isHeadlineEligible(rows(1)[0]!)).toBe(true);
-    expect(isHeadlineEligible(rows(1, { contractType: "fixed_term" })[0]!)).toBe(true);
-  });
-
-  it("excludes B2B and freelance from headline figures", () => {
-    // Their gross carries the worker's social contributions, so averaging it
-    // with employed gross produces a number describing nobody. This is the
-    // single most distorting mistake available in European pay data.
-    expect(isHeadlineEligible(rows(1, { contractType: "b2b" })[0]!)).toBe(false);
-    expect(isHeadlineEligible(rows(1, { contractType: "contractor" })[0]!)).toBe(false);
-  });
-
-  it("excludes part-timers rather than extrapolating them", () => {
-    // Scaling a 60% contract to full time invents a salary nobody is paid.
-    expect(isHeadlineEligible(rows(1, { ftePercent: 60 })[0]!)).toBe(false);
-    expect(isHeadlineEligible(rows(1, { ftePercent: null })[0]!)).toBe(true);
-  });
-});
+/** The row for one population in one country, by country name. */
+function countryRow(
+  stats: ReturnType<typeof aggregate>["stats"],
+  name: string,
+  population = "employee",
+) {
+  return stats.countries.find((c) => c.name === name && c.population === population);
+}
 
 describe("aggregate", () => {
   it("publishes nothing from an empty dataset", () => {
     const { stats } = aggregate([], RATES);
     expect(stats.totalResponses).toBe(0);
-    expect(stats.europe).toBeNull();
     expect(stats.countries).toEqual([]);
+    expect(stats.cuts).toEqual({});
   });
 
   it("withholds a country's median until it clears the threshold", () => {
     const { stats } = aggregate(rows(COUNTRY_PUBLISH_MIN - 1), RATES);
-    const germany = stats.countries.find((c) => c.name === "Germany");
+    const germany = countryRow(stats, "Germany");
     expect(germany?.responses).toBe(COUNTRY_PUBLISH_MIN - 1);
     expect(germany?.median).toBeNull();
     expect(germany?.p25).toBeNull();
@@ -60,7 +49,7 @@ describe("aggregate", () => {
 
   it("publishes once the threshold is reached", () => {
     const { stats } = aggregate(rows(COUNTRY_PUBLISH_MIN), RATES);
-    const germany = stats.countries.find((c) => c.name === "Germany");
+    const germany = countryRow(stats, "Germany");
     expect(germany?.median).toBeGreaterThan(0);
     expect(germany?.p25).toBeLessThan(germany!.median!);
   });
@@ -69,13 +58,12 @@ describe("aggregate", () => {
     // Suppression happens once, on the way out. A withheld value is absent
     // from the file rather than present-but-hidden.
     const { stats } = aggregate(rows(10), RATES);
-    const serialised = JSON.stringify(stats);
-    expect(serialised).toContain('"median":null');
+    expect(JSON.stringify(stats)).toContain('"median":null');
   });
 
   it("converts foreign currencies rather than treating them as euro", () => {
     const polish = aggregate(rows(COUNTRY_PUBLISH_MIN, { country: "PL", currency: "PLN" }), RATES);
-    const median = polish.stats.countries.find((c) => c.name === "Poland")?.median ?? 0;
+    const median = countryRow(polish.stats, "Poland")?.median ?? 0;
     // 60,000 PLN is roughly 14,000 EUR. Treating it as euro would put Polish
     // salaries about four times too high and nothing would look wrong.
     expect(median).toBeGreaterThan(13_000);
@@ -87,24 +75,12 @@ describe("aggregate", () => {
     expect(skipped).toContainEqual({ reason: "missing_exchange_rate", count: 5 });
   });
 
-  it("counts every response but bases figures only on eligible ones", () => {
-    const mixed = [...rows(COUNTRY_PUBLISH_MIN), ...rows(40, { contractType: "b2b" })];
-    const { stats, skipped } = aggregate(mixed, RATES);
-
-    expect(stats.totalResponses).toBe(mixed.length);
-    expect(skipped).toContainEqual({ reason: "non_employee_contract", count: 40 });
-    expect(stats.countries.find((c) => c.name === "Germany")?.responses).toBe(
-      COUNTRY_PUBLISH_MIN,
-    );
-  });
-
   it("adds bonus and equity into total compensation", () => {
     const withExtras = aggregate(
       rows(COUNTRY_PUBLISH_MIN, { baseSalary: 60_000, bonus: 10_000, equityAnnual: 5_000 }),
       RATES,
     );
-    const median = withExtras.stats.countries.find((c) => c.name === "Germany")?.median ?? 0;
-    expect(median).toBe(75_000);
+    expect(countryRow(withExtras.stats, "Germany")?.median).toBe(75_000);
   });
 
   it("empties any histogram bucket holding too few people to be anonymous", () => {
@@ -112,7 +88,7 @@ describe("aggregate", () => {
     // bucket — a visible, identifiable individual.
     const sample = [...rows(200, { baseSalary: 60_000 }), ...rows(1, { baseSalary: 61_000 })];
     const { stats } = aggregate(sample, RATES);
-    for (const bin of stats.europe?.bins ?? []) {
+    for (const bin of findCut(stats, "employee", null, null)?.distribution?.bins ?? []) {
       expect(bin.count === 0 || bin.count >= MIN_CELL_SIZE).toBe(true);
     }
   });
@@ -126,15 +102,75 @@ describe("aggregate", () => {
       ],
       RATES,
     );
-    const names = stats.countries.map((c) => c.name);
+    const names = stats.countries.filter((c) => c.population === "employee").map((c) => c.name);
     expect(names[0]).toBe("Switzerland");
     expect(names[1]).toBe("Germany");
     expect(names.at(-1)).toBe("Portugal");
   });
 });
 
+/**
+ * The change this file exists to protect.
+ *
+ * Every response reaches a published population now. Nothing is dropped for
+ * being the wrong kind of worker, and no population's figures leak into
+ * another's — those are two different assertions and both are made below.
+ */
+describe("populations", () => {
+  it("skips nobody for the kind of contract they are on", () => {
+    const mixed = [
+      ...rows(3),
+      ...rows(3, { contractType: "b2b", salaryPeriod: "year" }),
+      ...rows(3, { ftePercent: 60 }),
+    ];
+    const { stats, skipped } = aggregate(mixed, RATES);
+
+    expect(skipped).toEqual([]);
+    expect(stats.totalResponses).toBe(9);
+    for (const population of ["employee", "part_time", "contractor"] as const) {
+      expect(countryRow(stats, "Germany", population)?.responses).toBe(3);
+    }
+  });
+
+  it("keeps each population's answers out of the others' figures", () => {
+    const { stats } = aggregate(
+      [
+        ...rows(COUNTRY_PUBLISH_MIN, { baseSalary: 60_000 }),
+        ...rows(COUNTRY_PUBLISH_MIN, { baseSalary: 200_000, contractType: "b2b" }),
+        ...rows(COUNTRY_PUBLISH_MIN, { baseSalary: 30_000, ftePercent: 50 }),
+      ],
+      RATES,
+    );
+
+    expect(countryRow(stats, "Germany", "employee")?.median).toBe(60_000);
+    expect(countryRow(stats, "Germany", "part_time")?.median).toBe(30_000);
+    // Not 200,000: a contractor is measured per day, at the standard year.
+    expect(countryRow(stats, "Germany", "contractor")?.median).toBe(
+      Math.round(200_000 / STANDARD_BILLED_DAYS),
+    );
+  });
+
+  it("publishes a part-time salary as paid, never scaled to full time", () => {
+    const { stats } = aggregate(
+      rows(COUNTRY_PUBLISH_MIN, { baseSalary: 36_000, ftePercent: 60 }),
+      RATES,
+    );
+    // 36,000 at 60% is not 60,000. Scaling would invent a salary nobody is
+    // paid, which is the reason part-timers were excluded before rather than
+    // a reason to exclude them.
+    expect(countryRow(stats, "Germany", "part_time")?.median).toBe(36_000);
+  });
+
+  it("has no key that could hold a figure averaged across populations", () => {
+    const { stats } = aggregate([...rows(3), ...rows(3, { contractType: "b2b" })], RATES);
+    for (const key of Object.keys(stats.cuts)) {
+      expect(key.split("|")[0]).toMatch(/^(employee|part_time|contractor)$/);
+    }
+  });
+});
+
 describe("contractor day rates", () => {
-  const dayRate = (over: Partial<AggregateRow> = {}): AggregateRow => ({
+  const contractor = (over: Partial<AggregateRow> = {}): AggregateRow => ({
     country: "BE",
     level: "senior",
     contractType: "contractor",
@@ -148,67 +184,64 @@ describe("contractor day rates", () => {
   });
 
   const rates = { EUR: 1, GBP: 0.85 };
+  const many = (n: number, over: Partial<AggregateRow> = {}) =>
+    Array.from({ length: n }, () => contractor(over));
 
-  it("reports the quoted rate, never an annualised one", () => {
-    // The whole point: 700/day stays 700, it does not become 700 × billed days.
-    const { stats } = aggregate([dayRate({ daysPerYear: 220 })], rates);
-    expect(stats.dayRates?.[0]?.responses).toBe(1);
+  it("uses a quoted rate exactly as given", () => {
+    const { stats } = aggregate(many(DAY_RATE_PUBLISH_MIN, { daysPerYear: 120 }), rates);
+    // 700 a day stays 700 whether they billed 120 days or 250. The rate is a
+    // price; how much of the year somebody worked is not a discount on it.
+    expect(countryRow(stats, "Belgium", "contractor")?.median).toBe(700);
+  });
+
+  it("derives a rate from an annual figure at the standard year", () => {
+    const { stats } = aggregate(
+      many(DAY_RATE_PUBLISH_MIN, { salaryPeriod: "year", baseSalary: 154_000 }),
+      rates,
+    );
+    expect(countryRow(stats, "Belgium", "contractor")?.median).toBe(700);
   });
 
   it("ignores bonus and equity, which are annual totals not prices", () => {
-    const withExtras = Array.from({ length: DAY_RATE_PUBLISH_MIN }, () =>
-      dayRate({ bonus: 50_000, equityAnnual: 20_000 }),
+    const { stats } = aggregate(
+      many(DAY_RATE_PUBLISH_MIN, { bonus: 50_000, equityAnnual: 20_000 }),
+      rates,
     );
-    const { stats } = aggregate(withExtras, rates);
-    expect(stats.dayRates?.[0]?.median).toBe(700);
+    expect(countryRow(stats, "Belgium", "contractor")?.median).toBe(700);
   });
 
-  it("excludes employees, whose day rate is not pricing the same thing", () => {
-    const { stats } = aggregate([dayRate({ contractType: "permanent" })], rates);
-    expect(stats.dayRates ?? []).toHaveLength(0);
-  });
-
-  it("excludes contractors who quoted anything other than a day rate", () => {
-    const rows = [
-      dayRate({ salaryPeriod: "year", baseSalary: 150_000 }),
-      dayRate({ salaryPeriod: "hour", baseSalary: 90, hoursPerYear: 1600 }),
-      dayRate({ salaryPeriod: null }),
-    ];
-    const { stats } = aggregate(rows, rates);
-    expect(stats.dayRates ?? []).toHaveLength(0);
+  it("leaves an employee who quoted a day rate in the salary figures", () => {
+    // An employee's day rate is not pricing the same thing, so it annualises
+    // into total compensation rather than joining the contractor medians.
+    const { stats } = aggregate(
+      Array.from({ length: COUNTRY_PUBLISH_MIN }, () =>
+        contractor({ contractType: "permanent", ftePercent: 100, daysPerYear: 220 }),
+      ),
+      rates,
+    );
+    expect(countryRow(stats, "Belgium", "contractor")).toBeUndefined();
+    expect(countryRow(stats, "Belgium", "employee")?.median).toBe(154_000);
   });
 
   it("withholds the figures below the day-rate threshold but keeps the count", () => {
-    const rows = Array.from({ length: DAY_RATE_PUBLISH_MIN - 1 }, () => dayRate());
-    const { stats } = aggregate(rows, rates);
-    expect(stats.dayRates?.[0]?.responses).toBe(DAY_RATE_PUBLISH_MIN - 1);
-    expect(stats.dayRates?.[0]?.median).toBeNull();
-  });
-
-  it("publishes once the threshold is reached", () => {
-    const rows = Array.from({ length: DAY_RATE_PUBLISH_MIN }, (_, i) =>
-      dayRate({ baseSalary: 600 + i * 10 }),
-    );
-    const { stats } = aggregate(rows, rates);
-    expect(stats.dayRates?.[0]?.median).toBeGreaterThan(600);
-    expect(stats.dayRates?.[0]?.p25).toBeLessThan(stats.dayRates![0]!.median!);
+    const { stats } = aggregate(many(DAY_RATE_PUBLISH_MIN - 1), rates);
+    const row = countryRow(stats, "Belgium", "contractor");
+    expect(row?.responses).toBe(DAY_RATE_PUBLISH_MIN - 1);
+    expect(row?.median).toBeNull();
   });
 
   it("converts to euro rather than comparing currencies directly", () => {
-    const rows = Array.from({ length: DAY_RATE_PUBLISH_MIN }, () =>
-      dayRate({ country: "UK", baseSalary: 850, currency: "GBP" }),
-    );
-    const { stats } = aggregate(rows, rates);
-    expect(stats.dayRates?.[0]?.median).toBe(1000);
-  });
-
-  it("does not let day rates reach the salary medians", () => {
-    // The salary side must be untouched by any of this.
     const { stats } = aggregate(
-      Array.from({ length: DAY_RATE_PUBLISH_MIN }, () => dayRate()),
+      many(DAY_RATE_PUBLISH_MIN, { country: "UK", baseSalary: 850, currency: "GBP" }),
       rates,
     );
-    expect(stats.countries).toHaveLength(0);
-    expect(stats.europe).toBeNull();
+    expect(countryRow(stats, "United Kingdom", "contractor")?.median).toBe(1000);
+  });
+
+  it("reports a monthly figure it cannot convert instead of guessing the multiplier", () => {
+    // Thirteen and fourteen payment years are normal in five countries, so a
+    // missing count is not a licence to assume twelve.
+    const { skipped } = aggregate(many(3, { salaryPeriod: "month", baseSalary: 12_000 }), rates);
+    expect(skipped).toContainEqual({ reason: "missing_payments_per_year", count: 3 });
   });
 });

@@ -295,7 +295,7 @@ export function SurveyWizard({
     },
     {
       title: "What kind of contract?",
-      hint: "This matters more than it looks: B2B and freelance gross figures are not comparable with employed ones.",
+      hint: "This decides which figures your answer joins. Employee salaries and contractor day rates are published separately, because the same gross means something different under each.",
       body: (
         <>
           <Choice

@@ -5,8 +5,9 @@ import { useEffect, useState } from "react";
 import { Share } from "@/components/Share";
 import { count, ordinal, withArticle } from "@/lib/format";
 import { gapMessage } from "@/lib/share";
+import { POPULATION_LABELS, type Population } from "@/lib/stats/populations";
 import { COUNTRIES } from "@/lib/survey/options";
-import { standingOf, trackOf, type Answered, type Standing } from "@/lib/survey/standing";
+import { populationOf, standingOf, type Answered } from "@/lib/survey/standing";
 
 import { SubscribeForm } from "../SubscribeForm";
 import { Button } from "../ui";
@@ -16,25 +17,27 @@ import { Button } from "../ui";
  *
  * This is the only moment where somebody has just spent two minutes on the
  * survey and feels good about it, and the project's hardest problem is that
- * nothing publishes until a country reaches sixty responses. So the screen's
- * job is not to thank people. It is to convert that goodwill into the next
- * response, and the only lever that does that is the person on this page
- * telling someone else.
+ * nothing publishes until a cut reaches its threshold. So the screen's job is
+ * not to thank people. It is to convert that goodwill into the next response,
+ * and the only lever that does that is the person on this page telling someone
+ * else.
  *
  * The order is deliberate: acknowledgement, then the gap, then the share, and
  * everything else below it. The email form used to sit directly under the
  * thanks; it now sits under the share, because a subscriber is worth one
  * reader later and a forward is worth a response now.
+ *
+ * Everything personal on this screen is scoped to the answer's own population.
+ * An employee is placed among employees and a contractor among contractors,
+ * each against the threshold their own figures publish on, because the
+ * alternative was measuring a contractor against a count they were never in.
  */
+
+type Standing = { responses: number; remaining: number; threshold: number; published: boolean };
 
 type Progress = {
   country: string;
-  responses: number;
-  remaining: number;
-  published: boolean;
-  dayRates: number;
-  dayRatesRemaining: number;
-  dayRatesPublished: boolean;
+  populations: Record<Population, Standing>;
 };
 
 export function Confirmation({
@@ -70,34 +73,21 @@ export function Confirmation({
   // sentence, which is everywhere it appears on this screen.
   const named = withArticle(countryName);
 
-  const message = progress
-    ? gapMessage(countryName, progress.remaining, progress.published)
-    : gapMessage("Europe", 0, true);
+  const population: Population = answer ? populationOf(answer) : "employee";
+  const words = POPULATION_LABELS[population];
+  const track = progress?.populations[population] ?? null;
+  const standing = answer && track ? standingOf(answer, track.responses) : null;
 
-  // What this particular answer did, which is not always "joined the median".
-  // Without an answer to judge — only reachable if the wizard stops passing
-  // one — the screen says nothing personal rather than guessing.
-  const standing = answer && progress ? standingOf(answer, progress.responses) : null;
-  const onDayRates = standing !== null && trackOf(standing) === "day-rate";
-  const track =
-    progress && onDayRates
-      ? {
-          done: progress.dayRates,
-          remaining: progress.dayRatesRemaining,
-          published: progress.dayRatesPublished,
-        }
-      : progress && {
-          done: progress.responses,
-          remaining: progress.remaining,
-          published: progress.published,
-        };
+  const message = track
+    ? gapMessage(countryName, track.remaining, track.published, population)
+    : gapMessage("Europe", 0, true, population);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-xl border border-line bg-surface p-8 text-center shadow-lg">
         <h2 className="text-xl">{duplicate ? "Already counted." : "That’s in."}</h2>
 
-        {progress && track && (
+        {track && (
           <div className="mx-auto mt-6 max-w-sm">
             {duplicate ? (
               <p className="mx-auto max-w-[46ch] text-sm text-ink-2">
@@ -106,29 +96,27 @@ export function Confirmation({
                 times, and it works on your connection and browser for the day only.
               </p>
             ) : (
-              <Placement standing={standing} named={named} />
+              standing?.kind === "position" && (
+                <p className="text-sm text-ink-2">
+                  You&rsquo;re the{" "}
+                  <b className="figure-num font-semibold text-ink">{ordinal(standing.position)}</b>{" "}
+                  {words.member} from {named}.
+                </p>
+              )
             )}
 
             {track.published ? (
               <p className="mx-auto mt-4 max-w-[42ch] text-sm text-ink-2">
                 {duplicate ? (
                   <>
-                    {named}&rsquo;s figures are published, from {count(track.done)} responses.
-                  </>
-                ) : onDayRates ? (
-                  <>
-                    {named}&rsquo;s contractor day rates are published, and yours makes them
-                    sharper. It joins {count(Math.max(0, track.done - 1))} others.
-                  </>
-                ) : standing === null || standing.kind === "position" || standing.kind === "counted" ? (
-                  <>
-                    {named}&rsquo;s figures are published, and yours makes them sharper. It joins{" "}
-                    {count(Math.max(0, track.done - 1))} others.
+                    {named}&rsquo;s {words.figures} {words.verb === "publish" ? "are" : "is"}{" "}
+                    published, from {count(track.responses)} answers.
                   </>
                 ) : (
                   <>
-                    {named}&rsquo;s figures are published, from {count(track.done)} full-time
-                    employees.
+                    {named}&rsquo;s {words.figures} {words.verb === "publish" ? "are" : "is"}{" "}
+                    published, and yours makes them sharper. It joins{" "}
+                    {count(Math.max(0, track.responses - 1))} others.
                   </>
                 )}
               </p>
@@ -137,26 +125,18 @@ export function Confirmation({
                 <div
                   className="mt-3 h-1.5 overflow-hidden rounded-full bg-track"
                   role="img"
-                  aria-label={
-                    onDayRates
-                      ? `${track.done} of the day rates ${named} needs`
-                      : `${track.done} of the responses ${named} needs`
-                  }
+                  aria-label={`${track.responses} of the ${track.threshold} answers ${named} needs`}
                 >
                   <div
                     className="h-full rounded-full bg-coral transition-[width] duration-700"
                     style={{
-                      width: `${Math.min(100, (track.done / Math.max(1, track.done + track.remaining)) * 100)}%`,
+                      width: `${Math.min(100, (track.responses / track.threshold) * 100)}%`,
                     }}
                   />
                 </div>
                 <p className="mt-3 text-xs text-ink-2">
-                  <b className="font-semibold text-ink">{count(track.remaining)} more</b>
-                  {onDayRates ? (
-                    <> and {named}&rsquo;s contractor day rates publish.</>
-                  ) : (
-                    <> and {named}&rsquo;s median publishes.</>
-                  )}
+                  <b className="font-semibold text-ink">{count(track.remaining)} more</b> and{" "}
+                  {named}&rsquo;s {words.figures} {words.verb}.
                 </p>
               </>
             )}
@@ -170,21 +150,19 @@ export function Confirmation({
         prominent
         message={message}
         headline={
-          progress && !progress.published ? (
-            <>
-              Now the part that actually decides whether {named} ever publishes.
-            </>
+          track && !track.published ? (
+            <>Now the part that actually decides whether {named} ever publishes.</>
           ) : (
             <>Now pass it on.</>
           )
         }
         blurb={
-          progress && !progress.published ? (
+          track && !track.published ? (
             <>
               You are not asking anyone for a favour. Everyone you send it to gets the same two
               minutes and the same answer you just bought yourself, and those{" "}
-              {count(progress.remaining)} responses arrive that way or not at all. One team
-              channel or one group chat is genuinely most of the way there.
+              {count(track.remaining)} responses arrive that way or not at all. One team channel
+              or one group chat is genuinely most of the way there.
             </>
           ) : (
             <>
@@ -213,53 +191,5 @@ export function Confirmation({
         response back out later — we would have no way to tell which one was yours.
       </p>
     </div>
-  );
-}
-
-/**
- * Where this answer landed, in one sentence.
- *
- * "You're the 4th engineer from Italy" is the line worth having, and it is
- * only true for an answer that is actually in that count. The other branches
- * exist because the alternative was telling a contractor they were the 0th
- * engineer from their country: their answer is deliberately kept out of the
- * employee median, so the count never moved for them. Saying which median an
- * answer does reach is both true and more use than an ordinal.
- */
-function Placement({ standing, named }: { standing: Standing | null; named: string }) {
-  if (standing === null || standing.kind === "counted") return null;
-
-  if (standing.kind === "position") {
-    return (
-      <p className="text-sm text-ink-2">
-        You&rsquo;re the{" "}
-        <b className="figure-num font-semibold text-ink">{ordinal(standing.position)}</b> engineer
-        from {named}.
-      </p>
-    );
-  }
-
-  return (
-    <p className="mx-auto max-w-[46ch] text-sm text-ink-2">
-      {standing.kind === "day-rate" ? (
-        <>
-          Your rate counts towards {named}&rsquo;s contractor day rates, not its employee median.
-          Contractor gross carries the contributions an employer would otherwise pay, so the two
-          are not the same number.
-        </>
-      ) : standing.kind === "part-time" ? (
-        <>
-          Your answer is in the dataset and the download. It stays out of {named}&rsquo;s median,
-          which covers full-time contracts only, because scaling a part-time salary up to full time
-          invents a figure nobody is paid.
-        </>
-      ) : (
-        <>
-          Your answer is in the dataset and the download. It stays out of {named}&rsquo;s median,
-          which covers employees only, because your gross carries contributions an employer would
-          otherwise pay and averaging the two describes nobody.
-        </>
-      )}
-    </p>
   );
 }

@@ -8,6 +8,8 @@
  * See CLAUDE.md §7.
  */
 
+import { POPULATION_UNIT, type Population } from "./stats/populations";
+
 /**
  * Cell suppression. Any published cut of the data with fewer than this many
  * responses is withheld entirely.
@@ -18,11 +20,14 @@
 export const MIN_CELL_SIZE = 5;
 
 /**
- * A country's figures publish once it clears this many responses.
+ * A country's salary figures publish once it clears this many responses.
  *
  * This is a *statistical* rule, not a privacy one — distinct from
  * {@link MIN_CELL_SIZE} and deliberately much higher. A median over six people
  * is not a median worth printing.
+ *
+ * Applies per population, not per country: employees and part-time employees
+ * each need this many of their own. See {@link publishMinFor}.
  */
 export const COUNTRY_PUBLISH_MIN = 60;
 
@@ -53,6 +58,32 @@ export function isDayRatePublishable(rates: number): boolean {
 export function dayRatesUntilPublish(rates: number): number {
   assertCount(rates, "rates");
   return Math.max(0, DAY_RATE_PUBLISH_MIN - rates);
+}
+
+/**
+ * The threshold a population publishes on.
+ *
+ * Every population has one, and the difference between them is statistical
+ * rather than editorial: annual total compensation is a wide, asymmetric
+ * distribution that needs sixty observations to pin a median down, while a day
+ * rate is a single negotiated price carrying none of that variance. A lower
+ * bar for contractors is not a lower standard applied to get something on the
+ * page sooner — it is the same standard applied to a narrower quantity.
+ */
+export function publishMinFor(population: Population): number {
+  return POPULATION_UNIT[population] === "day" ? DAY_RATE_PUBLISH_MIN : COUNTRY_PUBLISH_MIN;
+}
+
+/** Whether this many responses publish, for this population. */
+export function isPublishable(population: Population, responses: number): boolean {
+  assertCount(responses, "responses");
+  return responses >= publishMinFor(population);
+}
+
+/** How many more responses this population needs in this cut. */
+export function untilPublish(population: Population, responses: number): number {
+  assertCount(responses, "responses");
+  return Math.max(0, publishMinFor(population) - responses);
 }
 
 /** Percentiles at which published statistics are trimmed. Both ends. */

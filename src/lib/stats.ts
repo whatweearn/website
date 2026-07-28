@@ -10,7 +10,17 @@
  * output. Nothing else has to change.
  */
 
-import { isCountryPublishable } from "./thresholds";
+import { POPULATION_UNIT, type Population, type Unit } from "./stats/populations";
+import { isPublishable, untilPublish } from "./thresholds";
+
+export {
+  POPULATIONS,
+  POPULATION_LABELS,
+  POPULATION_UNIT,
+  isPopulation,
+  type Population,
+  type Unit,
+} from "./stats/populations";
 
 export type Bin = {
   /** Lower bound of the bucket, in euro. */
@@ -29,30 +39,22 @@ export type Distribution = {
   bins: Bin[];
 };
 
+/**
+ * One country's figures, for one population.
+ *
+ * There is a row per population per country, never a row per country: an
+ * employee median in euro a year and a contractor median in euro a day are
+ * different quantities in different units, and the type says so rather than
+ * leaving a caller to remember.
+ */
 export type CountryRow = {
+  population: Population;
+  code: string;
   name: string;
   /** Local currency, shown as context beside euro-converted figures. */
   currency: string;
   responses: number;
-  /** All null until the country clears the publication threshold. */
-  median: number | null;
-  p25: number | null;
-  p75: number | null;
-};
-
-/**
- * What contractors charge per day, in one country.
- *
- * A separate shape rather than another axis on {@link Cut}, because the unit is
- * different: these are euro *per day*, not euro per year. Sharing a keyspace
- * with annual figures would eventually let something render a €700 day rate as
- * a €700 salary, and nothing about the type would object.
- */
-export type DayRateRow = {
-  name: string;
-  /** Day rates quoted, whether or not the figures below are published. */
-  responses: number;
-  /** Euro per day. Null until the country clears the day-rate threshold. */
+  /** All null until this population clears its threshold in this country. */
   median: number | null;
   p25: number | null;
   p75: number | null;
@@ -62,14 +64,17 @@ export type DayRateRow = {
  * One filtered view of the data.
  *
  * `country`/`level` are null for "everywhere"/"all levels", so the same shape
- * covers the headline figure and the narrowest slice.
+ * covers the Europe-wide figure and the narrowest slice. `population` is never
+ * null: there is no view that averages across populations, because averaging
+ * across them is the mistake the whole aggregation exists to avoid.
  */
 export type Cut = {
+  population: Population;
   country: string | null;
   level: string | null;
   /** Always present — how thin a slice is remains publishable information. */
   responses: number;
-  /** Null when the cut has not cleared the publication threshold. */
+  /** In this population's unit. Null below its publication threshold. */
   median: number | null;
   p25: number | null;
   p75: number | null;
@@ -79,33 +84,46 @@ export type Cut = {
 export type SiteStats = {
   totalResponses: number;
   countriesCovered: number;
-  /** Null until there is enough data to draw anything honest. */
-  europe: Distribution | null;
+  /** One row per population per country. Filter with {@link countriesFor}. */
   countries: CountryRow[];
-  /**
-   * Contractor day rates by country. Separate from `countries` because the
-   * population and the unit are both different — see {@link DayRateRow}.
-   *
-   * Optional so a `stats.json` generated before this existed still loads
-   * rather than failing the build. The aggregation always writes it.
-   */
-  dayRates?: DayRateRow[];
-  /** Every filterable slice, keyed by `country|level` with `*` for "any". */
+  /** Every slice, keyed by `population|country|level` with `*` for "any". */
   cuts: Record<string, Cut>;
   /** Set once the downloadable dataset has been generated. */
   datasetRows?: number;
 };
 
-export function cutKey(country: string | null, level: string | null): string {
-  return `${country ?? "*"}|${level ?? "*"}`;
+export function cutKey(
+  population: Population,
+  country: string | null,
+  level: string | null,
+): string {
+  return `${population}|${country ?? "*"}|${level ?? "*"}`;
 }
 
 export function findCut(
   stats: SiteStats,
+  population: Population,
   country: string | null,
   level: string | null,
 ): Cut | undefined {
-  return stats.cuts[cutKey(country, level)];
+  return stats.cuts[cutKey(population, country, level)];
+}
+
+/** The unit a cut's figures are in, so nothing renders €700 a day as a salary. */
+export function unitOf(cut: Pick<Cut, "population">): Unit {
+  return POPULATION_UNIT[cut.population];
+}
+
+/** Country rows for one population, richest first. */
+export function countriesFor(stats: SiteStats, population: Population): CountryRow[] {
+  return stats.countries.filter((c) => c.population === population);
+}
+
+/** How many responses each population has, across everywhere. */
+export function populationCounts(stats: SiteStats): Record<Population, number> {
+  const counts = { employee: 0, part_time: 0, contractor: 0 };
+  for (const row of stats.countries) counts[row.population] += row.responses;
+  return counts;
 }
 
 /** True when we have nothing worth showing yet. */
@@ -122,21 +140,19 @@ export function isPreLaunch(stats: SiteStats): boolean {
  * Copy that makes the promise is gated on this.
  */
 export function hasPublishedFigures(stats: SiteStats): boolean {
-  return stats.europe !== null || stats.countries.some((c) => c.median !== null);
+  return stats.countries.some((c) => c.median !== null);
 }
 
 /**
- * The countries nearest to publishing, nearest first.
+ * The country and population pairs nearest to publishing, nearest first.
  *
- * Only countries still short of the threshold: one that has published is no
+ * Only pairs still short of their threshold: one that has published is no
  * longer something a visitor can help with.
  *
- * The counts are the ones the aggregation puts in `CountryRow.responses`,
- * which are headline-eligible responses — employees on full-time standard
- * contracts. That is deliberate, because it is the population
- * {@link isCountryPublishable} is actually applied to. Counting every response
- * instead would promise a publication that the aggregation then declines to
- * make.
+ * Measured as a *fraction* of the threshold rather than a raw count, because
+ * the thresholds differ. Twenty contractor day rates in Poland are five short
+ * of publishing while twenty employee salaries are forty short, and ranking
+ * those two by count alone would put the far one first.
  */
 export function countriesNearingPublication(
   stats: SiteStats,
@@ -144,21 +160,18 @@ export function countriesNearingPublication(
 ): readonly CountryRow[] {
   return stats.countries
     .filter((c) => c.median === null && c.responses > 0)
-    .sort((a, b) => b.responses - a.responses || a.name.localeCompare(b.name))
+    .sort(
+      (a, b) =>
+        progressTowardsPublishing(b) - progressTowardsPublishing(a) ||
+        a.name.localeCompare(b.name),
+    )
     .slice(0, limit);
 }
 
-/**
- * Countries with at least one quoted day rate, most rates first.
- *
- * Unlike {@link countriesNearingPublication} this keeps countries that have
- * already published: a contractor comparing rates wants the published ones
- * most of all.
- */
-export function dayRatesByCountry(stats: SiteStats): readonly DayRateRow[] {
-  return [...(stats.dayRates ?? [])].sort(
-    (a, b) => b.responses - a.responses || a.name.localeCompare(b.name),
-  );
+/** How far along its own threshold a row is, 0 to 1. */
+export function progressTowardsPublishing(row: CountryRow): number {
+  const remaining = untilPublish(row.population, row.responses);
+  return row.responses / (row.responses + remaining);
 }
 
 export function totalCount(d: Distribution): number {
@@ -191,8 +204,8 @@ export function percentileAt(d: Distribution, value: number): number {
   return Math.min(99, Math.max(1, Math.round((below / total) * 100)));
 }
 
-export function publishableCountries(stats: SiteStats): CountryRow[] {
-  return stats.countries.filter((c) => isCountryPublishable(c.responses));
+export function publishableCountries(stats: SiteStats, population: Population): CountryRow[] {
+  return countriesFor(stats, population).filter((c) => isPublishable(c.population, c.responses));
 }
 
 /** Where the nightly job writes its output, relative to the project root. */
@@ -207,9 +220,7 @@ export const STATS_FILE = "src/data/stats.json";
 export const EMPTY_STATS: SiteStats = {
   totalResponses: 0,
   countriesCovered: 0,
-  europe: null,
   countries: [],
-  dayRates: [],
   cuts: {},
 };
 

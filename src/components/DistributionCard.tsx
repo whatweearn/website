@@ -9,7 +9,16 @@ import { COUNTRY_PUBLISH_MIN } from "@/lib/thresholds";
 import { Button, cx } from "./ui";
 
 const AXIS_TICKS = 5;
-const STEP = 500;
+
+/**
+ * Slider granularity, per unit.
+ *
+ * €500 steps are right for an annual figure and absurd for a day rate, where
+ * the entire published range is a few hundred euro wide.
+ */
+const STEP = { "a year": 500, "a day": 25 } as const;
+
+export type CardUnit = keyof typeof STEP;
 
 /** Percent position of a value along the axis, clamped off both edges. */
 function positionOf(value: number, d: Distribution): number {
@@ -100,8 +109,17 @@ function AwaitingData({ lifted }: { lifted?: boolean }) {
   );
 }
 
-function Interactive({ distribution, lifted }: { distribution: Distribution; lifted?: boolean }) {
+function Interactive({
+  distribution,
+  lifted,
+  unit,
+}: {
+  distribution: Distribution;
+  lifted?: boolean;
+  unit: CardUnit;
+}) {
   const [value, setValue] = useState(() => distribution.median);
+  const perDay = unit === "a day";
 
   const peak = useMemo(
     () => Math.max(...distribution.bins.map((b) => b.count), 1),
@@ -131,7 +149,9 @@ function Interactive({ distribution, lifted }: { distribution: Distribution; lif
 
       <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5 pt-6 pb-2.5">
         <div>
-          <span className="mb-[0.45rem] block text-xs text-ink-3">Your total comp</span>
+          <span className="mb-[0.45rem] block text-xs text-ink-3">
+            {perDay ? "Your day rate" : "Your total comp"}
+          </span>
           <span className="figure-num block text-2xl leading-none font-semibold tracking-[-0.04em]">
             {euro(value)}
           </span>
@@ -177,13 +197,15 @@ function Interactive({ distribution, lifted }: { distribution: Distribution; lif
 
       <div className="figure-num mt-[0.7rem] flex justify-between text-2xs text-ink-3">
         {ticks.map((tick) => (
-          <span key={tick}>{euroCompact(tick)}</span>
+          <span key={tick}>{perDay ? euro(tick) : euroCompact(tick)}</span>
         ))}
       </div>
 
       <div className="mt-6">
         <label htmlFor="comp" className="mb-[0.35rem] block text-xs text-ink-2">
-          Drag to your total comp — gross annual, base plus bonus and equity
+          {perDay
+            ? "Drag to your day rate — gross, as you quote it"
+            : "Drag to your total comp — gross annual, base plus bonus and equity"}
         </label>
         <input
           id="comp"
@@ -191,7 +213,7 @@ function Interactive({ distribution, lifted }: { distribution: Distribution; lif
           className="comp-slider"
           min={distribution.lo}
           max={distribution.hi}
-          step={STEP}
+          step={STEP[unit]}
           value={value}
           onChange={(e) => setValue(Number(e.target.value))}
           aria-valuetext={`${euro(value)}, ${ordinal(percentile)} percentile, ${medianGapPhrase(
@@ -216,12 +238,15 @@ function Interactive({ distribution, lifted }: { distribution: Distribution; lif
 export function DistributionCard({
   distribution,
   lifted,
+  unit = "a year",
 }: {
   distribution: Distribution | null;
   lifted?: boolean;
+  /** Which population's unit the figures are in. Never mixed on one card. */
+  unit?: CardUnit;
 }) {
   return distribution ? (
-    <Interactive distribution={distribution} lifted={lifted} />
+    <Interactive distribution={distribution} lifted={lifted} unit={unit} />
   ) : (
     <AwaitingData lifted={lifted} />
   );

@@ -23,6 +23,7 @@
  */
 
 import { withArticle } from "./format";
+import type { Population } from "./stats/populations";
 
 /**
  * For anyone who has not answered yet, which is everyone reading the landing
@@ -46,10 +47,21 @@ export const INVITE_MESSAGE =
  * it is. That is a real reason to spend two minutes; "help us reach sixty" is
  * not.
  */
-export function gapMessage(country: string, remaining: number, published: boolean): string {
+export function gapMessage(
+  country: string,
+  remaining: number,
+  published: boolean,
+  population: Population = "employee",
+): string {
   const named = withArticle(country);
   if (published) {
     return `Just added my salary to whatweearn, an anonymous salary survey for engineers in Europe. Two minutes and you find out what your job and level actually pay in ${named}. Nothing gets linked to you.`;
+  }
+  // A contractor's two minutes go towards day rates, not the salary median, so
+  // the number they quote has to be the one their own answer moved. Sending
+  // somebody a gap they cannot close is how a share message stops being true.
+  if (population === "contractor") {
+    return `Just added my rate to whatweearn, an anonymous survey for engineers in Europe. Two minutes each, and ${named} needs ${remaining} more contractor day rates before any of us can see what the going rate really is.`;
   }
   // The country is kept out of the sentence-initial slot deliberately.
   // `withArticle` returns a lowercase "the Netherlands", which is right in

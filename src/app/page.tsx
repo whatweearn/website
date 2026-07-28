@@ -12,11 +12,18 @@ import {
   SurveyPreview,
 } from "@/components/sections";
 import { Container } from "@/components/ui";
-import { getSiteStats, hasPublishedFigures } from "@/lib/stats";
+import { findCut, getSiteStats, hasPublishedFigures } from "@/lib/stats";
 
 export default async function Home() {
   const stats = await getSiteStats();
   const published = hasPublishedFigures(stats);
+  // The one card on the site that has to pick a population rather than ask.
+  // It is a slider you drag to your own pay, so it needs a single unit, and
+  // full-time employment is the population most visitors arriving cold belong
+  // to. Everything downstream of the hero — the country table, the explorer —
+  // treats the populations as peers; this is the only place that does not, and
+  // the card names what it is showing rather than implying it covers everyone.
+  const europe = findCut(stats, "employee", null, null)?.distribution ?? null;
 
   return (
     <>
@@ -65,7 +72,7 @@ export default async function Home() {
 
         <section className="bg-tint pb-[clamp(2.25rem,4vw,3.25rem)]">
           <Container>
-            <DistributionCard distribution={stats.europe} lifted />
+            <DistributionCard distribution={europe} lifted />
             <Proof stats={stats} />
           </Container>
         </section>

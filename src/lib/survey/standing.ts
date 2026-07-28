@@ -1,24 +1,19 @@
-import { isDayRateEligible, isEmployeeContract, isHeadlineEligible } from "../stats/eligibility";
+import { type Population, populationOf } from "../stats/populations";
 
 /**
  * What the confirmation screen is allowed to say about the answer just given.
  *
- * The screen used to say one thing: "You're the 4th engineer from Italy",
- * where the number came from `countForCountry`. That count is the *headline
- * eligible* count, and the sentence quietly assumed two things it does not
- * guarantee: that the answer just submitted is in it, and that it is therefore
- * at least one.
+ * The screen used to take the live employee count and print it as an ordinal:
+ * "You're the 4th engineer from Italy". That count never contained a
+ * contractor's answer, so the first contractor from a country was told they
+ * were its 0th engineer, and a duplicate submission — where the first answer
+ * is kept rather than stored again — moved no count at all.
  *
- * Neither holds. A contractor's answer is deliberately excluded from that
- * count, so the first contractor to answer from a country was told they were
- * the 0th engineer from it. A same-day duplicate is silently kept as the first
- * answer rather than stored again, so the count does not move for that person
- * either. Both cases printed an ordinal that was false, on the one screen
- * whose whole job is to be worth trusting.
- *
- * So the decision is made here, from what the person actually answered, and it
- * is made in a pure function because "0th" is a thing the site must never say
- * again and a test can hold that.
+ * Now that every population publishes on its own count, the placement is a
+ * real statement again: it is a position within the population the answer
+ * actually belongs to. What remains is the guard that started this module.
+ * "0th" is a thing the site must never say, and a pure function with a test
+ * can hold that where a JSX conditional could not.
  */
 
 export type Answered = {
@@ -28,38 +23,24 @@ export type Answered = {
 };
 
 export type Standing =
-  /** In the country's headline median, and we know where it landed. */
-  | { kind: "position"; position: number }
+  /** In this population's count, and we know where it landed. */
+  | { kind: "position"; population: Population; position: number }
   /**
-   * In the headline median, but the live count does not show it. Reached by a
-   * duplicate submission, whose first answer we kept. Claim nothing personal.
+   * In the count, but the count does not show it. Reached by a duplicate
+   * submission, whose earlier answer we kept. Claim nothing personal.
    */
-  | { kind: "counted" }
-  /** Not an employee, quoted per day: goes to the contractor day-rate cut. */
-  | { kind: "day-rate" }
-  /** Not an employee, and not a day rate: in the dataset and no median. */
-  | { kind: "self-employed" }
-  /** An employee below the full-time floor. */
-  | { kind: "part-time" };
+  | { kind: "counted"; population: Population };
 
 /**
- * @param answer  the response just submitted, as far as eligibility cares
- * @param headlineResponses  live count of headline-eligible responses for the
- *                           country, which includes this one when it qualifies
+ * @param answer  the response just submitted, as far as population cares
+ * @param responses  live count for that population in that country, which
+ *                   includes this answer unless it was a duplicate
  */
-export function standingOf(answer: Answered, headlineResponses: number): Standing {
-  if (isHeadlineEligible(answer)) {
-    return Number.isInteger(headlineResponses) && headlineResponses >= 1
-      ? { kind: "position", position: headlineResponses }
-      : { kind: "counted" };
-  }
-  if (isDayRateEligible(answer)) return { kind: "day-rate" };
-  // Headline eligibility fails for an employee only on the full-time floor,
-  // so the remaining employee case is exactly part-time.
-  return isEmployeeContract(answer.contractType) ? { kind: "part-time" } : { kind: "self-employed" };
+export function standingOf(answer: Answered, responses: number): Standing {
+  const population = populationOf(answer);
+  return Number.isInteger(responses) && responses >= 1
+    ? { kind: "position", population, position: responses }
+    : { kind: "counted", population };
 }
 
-/** Which of the two published cuts this answer's progress bar should track. */
-export function trackOf(standing: Standing): "headline" | "day-rate" {
-  return standing.kind === "day-rate" ? "day-rate" : "headline";
-}
+export { populationOf } from "../stats/populations";
