@@ -73,7 +73,7 @@ export function SubscribeForm() {
         Email me when results publish
       </label>
       <p className="max-w-[52ch] text-xs leading-relaxed text-ink-2">
-        Optional, and never linked to your answers — it goes to a different database entirely,
+        Optional, and never linked to your answers. It goes to a different database entirely,
         which is also why we can never email you about your own numbers.
       </p>
       <div className="flex flex-wrap gap-3">

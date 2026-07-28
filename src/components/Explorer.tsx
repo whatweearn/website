@@ -134,7 +134,7 @@ export function Explorer({ stats }: { stats: SiteStats }) {
               <div key={label} className="bg-surface p-5">
                 <span className="block text-xs text-ink-3">{label}</span>
                 <span className="figure-num mt-2 block text-xl font-semibold tracking-[-0.03em]">
-                  {value === null ? "—" : euro(value)}
+                  {value === null ? "–" : euro(value)}
                   <small className="ml-1 text-xs font-normal text-ink-3">{words.unit}</small>
                 </span>
               </div>
@@ -176,7 +176,7 @@ export function Explorer({ stats }: { stats: SiteStats }) {
           <p className="mx-auto mt-3 max-w-[46ch] text-xs leading-relaxed text-ink-2">
             {responses === 0
               ? `No ${describing} have answered. Yours would be the first.`
-              : `${count(responses)} ${describing} have answered — ${untilPublish(population, responses)} more and this publishes. We hold figures back below ${publishMinFor(population)} rather than print a median that could be wrong by thousands.`}
+              : `${count(responses)} ${describing} have answered, ${untilPublish(population, responses)} more and this publishes. We hold figures back below ${publishMinFor(population)} rather than print a median that could be wrong by thousands.`}
           </p>
           <Button href="/survey" size="sm" arrow className="mt-6">
             Add yours

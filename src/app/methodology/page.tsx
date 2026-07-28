@@ -27,7 +27,7 @@ export default function MethodologyPage() {
     <LegalPage
       title="Methodology"
       updated="25 July 2026"
-      intro="Every choice below changes the numbers. They are written down so you can disagree with them — and, if you do, recompute from the raw dataset yourself."
+      intro="Every choice below changes the numbers. They are written down so you can disagree with them, and if you do, recompute from the raw dataset yourself."
     >
       <Section heading="Three groups, never averaged together">
         <p>
@@ -70,12 +70,12 @@ export default function MethodologyPage() {
             ],
             [
               "However you are paid",
-              "Base pay can be quoted per year, month, day or hour. Asking everyone for an annual figure forced a conversion in their head — worst of all for freelancers and B2B contractors, who think in day rates and would have had to guess a working year.",
+              "Base pay can be quoted per year, month, day or hour. Asking everyone for an annual figure forced a conversion in their head, worst of all for freelancers and B2B contractors, who think in day rates and would have had to guess a working year.",
             ],
             ["Not included", "Pension contributions, benefits, and anything not asked for. Employer social contributions are excluded, which is part of why employee and contractor figures are published separately."],
             [
               "The multiplier is asked for, never assumed",
-              "A monthly figure needs the number of payments (12, 13 or 14 — the last two are normal in Spain, Portugal, Italy, Austria and Greece). A day rate needs the days actually billed last year; an hourly rate, the hours. €600 a day is €120,000 over 200 days and €138,000 over 230, and picking between those on someone's behalf would be publishing a figure nobody supplied. Where the count is missing, the response is left out of the figures rather than annualised on a guess.",
+              "A monthly figure needs the number of payments (12, 13 or 14, the last two being normal in Spain, Portugal, Italy, Austria and Greece). A day rate needs the days actually billed last year; an hourly rate, the hours. €600 a day is €120,000 over 200 days and €138,000 over 230, and picking between those on someone's behalf would be publishing a figure nobody supplied. Where the count is missing, the response is left out of the figures rather than annualised on a guess.",
             ],
           ]}
         />
@@ -103,7 +103,7 @@ export default function MethodologyPage() {
         </p>
         <p>
           Anything that lands outside roughly €1,000 to €3,000,000 a year is refused at
-          submission — that is a typo, and one of them in a small sample moves a median. Merely
+          submission. That is a typo, and one of them in a small sample moves a median. Merely
           unusual figures are accepted and flagged for review: the lowest-paid junior in Ukraine
           and the highest-paid principal in Zurich are both real people whose answers we want.
         </p>
@@ -122,7 +122,7 @@ export default function MethodologyPage() {
         </p>
         <p>
           The rule is symmetric, so it cannot be tuned to push a median in a preferred direction,
-          and samples below twenty are left alone — cutting the tails off a small sample removes
+          and samples below twenty are left alone, because cutting the tails off a small sample removes
           a meaningful share of it and does more harm than the outliers would.
         </p>
       </Section>

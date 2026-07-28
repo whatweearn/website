@@ -19,7 +19,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "whatweearn — the anonymous European salary survey",
+    default: "whatweearn: the anonymous European salary survey",
     template: "%s · whatweearn",
   },
   description: DESCRIPTION,
@@ -28,14 +28,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: "whatweearn",
-    title: "whatweearn — the anonymous European salary survey",
+    title: "whatweearn: the anonymous European salary survey",
     description: DESCRIPTION,
     url: "/",
     locale: "en_GB",
   },
   twitter: {
     card: "summary_large_image",
-    title: "whatweearn — the anonymous European salary survey",
+    title: "whatweearn: the anonymous European salary survey",
     description: DESCRIPTION,
   },
   robots: { index: true, follow: true },

@@ -496,6 +496,58 @@ Two things follow for whoever picks this up:
 - **Per-country funnel data from the push is the evidence the translation question waits on**
   (§11). It only exists if the push is instrumented enough to tell where people arrived from,
   which self-hosted Umami or nothing at all makes awkward. Decide that before posting, not after.
+- **Every high-reach channel gates on contributor standing, and this project has none —
+  2026-07-27.** Reddit removed six of seven posts; HN refused the Show HN the same day, on the
+  ground that the account is unknown there rather than on anything in the submission. Two
+  independent confirmations make it a pattern: these communities defend specifically against
+  arriving with a link and no history, and standing takes months, is built per channel and does
+  not transfer. The channels left open are the ones where somebody else's standing does the
+  work (newsletters and press, `outreach/newsletters/pitches.md`) or where the standing is
+  already yours (Belgium, where the controller is registered and where
+  `DAY_RATE_PUBLISH_MIN` of 25 is the lowest bar in the system). **Never evade a stated
+  restriction** — reposting to HN without the Show HN prefix would convert a conditional
+  welcome into a penalised account. Full channel table in `outreach/README.md`.
+
+  **Resolved the same day, in the project's favour: TechPays was acquired by Levels.fyi and
+  has taken no new data since 2024.** The worry was that "every dataset I can find is
+  US-shaped" had stopped being true. What happened instead is that the one serious European
+  salary-transparency project was absorbed and stopped collecting, so the gap reopened. Use the
+  specific version in outreach copy rather than the sweeping one: a named project, a named
+  acquirer and a date are checkable, where "everything is US-shaped" is the kind of claim a
+  well-read editor discounts on sight.
+- **The first seven posts went out in 28 hours and six were removed — 2026-07-27.** Two of
+  those carry `removed_by_category: reddit`, which is Reddit's sitewide spam classifier rather
+  than any subreddit's moderators. That is the domain-level penalty `outreach/reddit/README.md`
+  opens by warning about, and the schedule it specified (one or two posts a day over four
+  weeks) was the mitigation that got skipped. **The push is paused.** Full removal log, the
+  meaning of each removal category, and the one-liner for checking a post's real status are in
+  that README; recovery modmail is in `outreach/reddit/modmail.md`.
+
+  Two things follow that outlast this incident. **A removed post looks live to its author**,
+  with no notification, so status has to be checked deliberately within an hour of posting or
+  the same mistake gets repeated six times. And **the stopping rule below could not have fired
+  correctly**: it reads response counts, and six of seven posts reached nobody, so the count
+  was measuring the spam filter rather than the pitch. A `reddit`-category removal is now its
+  own stop condition, ahead of any response threshold.
+- **The push has a stopping rule, and the metric is the best single country — 2026-07-27.**
+  Phase 7 previously said the survey is worthless below ~500 responses and that reach is the
+  only thing that moves it, without saying anywhere what "the push failed" looks like. A
+  seeding push with no defined failure condition does not end, it just gets quieter. The rule
+  lives in `outreach/reddit/README.md` and was set at 9 responses, deliberately before the
+  numbers were interesting enough to argue with: at the end of week 2, under 5 headline-eligible
+  responses in the best single country means reach is not the bottleneck and more subreddits
+  will not fix it. **Total responses is the wrong number to steer by** — `COUNTRY_PUBLISH_MIN`
+  is per country, so a total that looks like progress can be spread thin enough to publish
+  nothing at all.
+- **No outreach draft states a count in prose — 2026-07-27.** All 35 were written on launch day
+  saying "zero responses", which stopped being true the next day. A stale figure in a draft is a
+  false claim from the one project that cannot afford them, so counts are now tokens filled from
+  `stats.json` at posting time (`pnpm outreach <sub>`, `src/lib/outreach/facts.ts`), country
+  counts use the headline-eligible population the threshold is actually applied to, and a test
+  fails the build if a number is typed back in. The seven non-English drafts declare their
+  language so the substituted count agrees with the sentence around it; those plural forms are
+  researched, not authoritative, and want the same native-speaker read as `CONTRACT_LOCAL_TERMS`
+  (§11).
 
 ---
 
@@ -542,6 +594,22 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
   automated a11y checks. Plus a specific test asserting no response payload contains an email
   and no subscriber row carries a sub-day timestamp.
 - Never log request bodies.
+
+### Copy
+
+- **No em dashes in anything a visitor reads — 2026-07-27.** This reverses the earlier split
+  where `lib/share.ts` was "no dashes" and the rest of the site kept an editorial voice. There
+  were 63 in rendered strings and 328 across the outreach drafts. They are replaced by commas,
+  full stops, colons or parentheses depending on what the sentence was doing, never uniformly.
+  Comments and this file are exempt: they are read by people working on the repo, not by
+  someone deciding whether to trust a salary figure.
+- **The reason is not taste.** The site's entire argument is that a person built this and you
+  can check their working. Prose that reads as machine-generated undermines that in the one
+  way the methodology cannot answer, and it lands hardest on Reddit, which is where every
+  visitor for the foreseeable future comes from. `outreach/reddit/README.md` carries the fuller
+  rules, including the one about no sentence appearing in two posts.
+- An en dash (`–`) stays as the empty-cell marker in tables. It is typography, not punctuation
+  in a sentence.
 
 ---
 

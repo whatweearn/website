@@ -188,7 +188,7 @@ export function Confirmation({
           still change a decision. Here it is a reminder, not the headline. */}
       <p className="text-xs leading-relaxed text-ink-3">
         Nothing connects your answers to you, which is also why we cannot take one particular
-        response back out later — we would have no way to tell which one was yours.
+        response back out later. We would have no way to tell which one was yours.
       </p>
     </div>
   );

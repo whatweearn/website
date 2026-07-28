@@ -115,7 +115,7 @@ export function checkSalary(input: RateInput & { currency: string }): SalaryChec
     return {
       verdict: "impossible",
       annualEuro,
-      message: `That works out to about ${format(annualEuro)} a year. Check the amount and the period — a monthly or daily figure entered as yearly is the usual cause.`,
+      message: `That works out to about ${format(annualEuro)} a year. Check the amount and the period. A monthly or daily figure entered as yearly is the usual cause.`,
     };
   }
 
