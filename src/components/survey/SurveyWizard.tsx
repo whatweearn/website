@@ -18,6 +18,8 @@ import {
   contractTypesFor,
   type CountryCode,
 } from "@/lib/survey/options";
+import { STANDARD_BILLED_DAYS, STANDARD_HOURS_PER_DAY } from "@/lib/stats/dayRate";
+import { isEmployeeContract } from "@/lib/stats/populations";
 import { checkSalary } from "@/lib/survey/plausibility";
 import { submittableResponseSchema } from "@/lib/survey/schema";
 import type { Answered } from "@/lib/survey/standing";
@@ -27,6 +29,7 @@ import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
 import {
   FURTHEST_STEP_KEY,
   STEP_KEY,
+  type Draft,
   answersOf,
   clearDraft,
   getDraft,
@@ -39,29 +42,81 @@ import {
 import { Confirmation } from "./Confirmation";
 import { Turnstile } from "./Turnstile";
 
-const TOTAL_STEPS = 9;
+/**
+ * The screens, by name rather than by number.
+ *
+ * Positions used to be hard-coded — nine steps, and a map of field to index.
+ * They cannot be, now that the survey is shorter for some people: a contractor
+ * skips two screens, so "equity is screen 8" is true for an employee and wrong
+ * for them. Everything below derives from the list actually being shown.
+ */
+const STEP_IDS = [
+  "where",
+  "setup",
+  "contract",
+  "role",
+  "level",
+  "pay",
+  "bonus",
+  "equity",
+  "company",
+] as const;
+
+type StepId = (typeof STEP_IDS)[number];
+
+/**
+ * Screens that ask an employee's question.
+ *
+ * Nobody invoices themselves a bonus, and equity is not what a client pays a
+ * contractor. Neither reaches a contractor's published figure either — that is
+ * a day rate, base only — so asking was two screens of questions we then
+ * ignored, on half of the people who answer this survey.
+ */
+const EMPLOYEE_ONLY_STEPS: ReadonlySet<StepId> = new Set(["bonus", "equity"]);
 
 /** Which screen asks for each answer, so a rejection can navigate there. */
-const STEP_OF_FIELD: Record<string, number> = {
-  country: 0,
-  city: 0,
-  workSetup: 1,
-  payLocationAdjusted: 1,
-  contractType: 2,
-  ftePercent: 2,
-  discipline: 3,
-  primaryLanguage: 3,
-  level: 4,
-  yearsExperience: 4,
-  baseSalary: 5,
-  currency: 5,
-  paymentsPerYear: 5,
-  bonus: 6,
-  equityAnnual: 7,
-  companyStage: 7,
-  companySize: 8,
-  industry: 8,
+const STEP_OF_FIELD: Record<string, StepId> = {
+  country: "where",
+  city: "where",
+  workSetup: "setup",
+  payLocationAdjusted: "setup",
+  contractType: "contract",
+  ftePercent: "contract",
+  discipline: "role",
+  primaryLanguage: "role",
+  level: "level",
+  yearsExperience: "level",
+  baseSalary: "pay",
+  currency: "pay",
+  paymentsPerYear: "pay",
+  bonus: "bonus",
+  equityAnnual: "equity",
+  companyStage: "equity",
+  companySize: "company",
+  industry: "company",
 };
+
+/**
+ * The answers from screens this person was actually shown.
+ *
+ * A draft outlives a change of contract type, so somebody who filled in a
+ * bonus as an employee and then switched to contracting would otherwise submit
+ * it from a screen they can no longer see or correct. We ask, or we do not
+ * record — sending an answer nobody was shown the question for is the same
+ * mistake as recording one they never gave.
+ */
+function answersShown(draft: Draft, stepIds: readonly StepId[], employed: boolean): Draft {
+  const shown = new Set<StepId>(stepIds);
+  return Object.fromEntries(
+    Object.entries(answersOf(draft)).filter(([field]) => {
+      // A contractor has no full-time equivalent: they bill days. The field is
+      // hidden for them, so a stale value from before must not travel either.
+      if (field === "ftePercent" && !employed) return false;
+      const id = STEP_OF_FIELD[field];
+      return id === undefined || shown.has(id);
+    }),
+  );
+}
 
 export function SurveyWizard({
   formToken,
@@ -78,10 +133,28 @@ export function SurveyWizard({
   // already told us where they are does not answer it twice.
   const prefilled = Number(Boolean(initialCountry)) + Number(Boolean(initialLevel));
   const draft = useSyncExternalStore(subscribeToDraft, getDraft, getServerDraft);
+
+  // An employee is asked nine questions and a contractor seven. Which screens
+  // exist therefore depends on an answer given *on* one of them, so a saved
+  // position can outlive the screen it pointed at: reach equity as an
+  // employee, go back, switch to contractor, and step 7 no longer exists.
+  // Every position below is clamped for that reason.
+  //
+  // Unanswered counts as employed, so the survey starts at its full length and
+  // can only get shorter. The count must never *grow* as somebody answers:
+  // "question 3 of 7" becoming "of 9" reads as the form adding work, where the
+  // reverse is a small gift. It also keeps the nine the landing page promises
+  // true for anyone who has not reached the contract question yet.
+  const contractType = draft.contractType as string | undefined;
+  const employed = contractType === undefined || isEmployeeContract(contractType);
+  const stepIds = STEP_IDS.filter((id) => employed || !EMPLOYEE_ONLY_STEPS.has(id));
+  const totalSteps = stepIds.length;
+  const lastStep = totalSteps - 1;
+
   const savedStep = draft[STEP_KEY];
   const step =
-    typeof savedStep === "number" && savedStep >= 0 && savedStep < TOTAL_STEPS
-      ? savedStep
+    typeof savedStep === "number" && savedStep >= 0
+      ? Math.min(savedStep, lastStep)
       : prefilled === 2
         ? 1
         : 0;
@@ -90,8 +163,8 @@ export function SurveyWizard({
   // every screen in between.
   const savedFurthestStep = draft[FURTHEST_STEP_KEY];
   const furthestStep = Math.max(
-    typeof savedFurthestStep === "number" && savedFurthestStep >= 0 && savedFurthestStep < TOTAL_STEPS
-      ? savedFurthestStep
+    typeof savedFurthestStep === "number" && savedFurthestStep >= 0
+      ? Math.min(savedFurthestStep, lastStep)
       : 0,
     step,
   );
@@ -142,9 +215,15 @@ export function SurveyWizard({
   // shown as already filled in.
   const currency = (draft.currency as string | undefined) ?? defaultCurrency(country);
 
-  // Defaults to a yearly figure: what most employees will answer, and what the
-  // survey asked for before periods existed.
-  const salaryPeriod = (draft.salaryPeriod as string | undefined) ?? "year";
+  // Defaulted from the contract, because the two groups think in different
+  // units: an employee knows their annual or monthly salary, and a contractor
+  // knows their day rate. It is also the unit each one's figures are published
+  // in, so the default quietly lines up with what we can actually use.
+  //
+  // Like the currency default, this has to be *submitted* rather than merely
+  // shown — see the payload below. A default the server never receives is a
+  // silent corruption: a €650 day rate stored as a yearly salary.
+  const salaryPeriod = (draft.salaryPeriod as string | undefined) ?? (employed ? "year" : "day");
 
   // Checked as they type. Catching a mistyped figure on the screen that asks
   // for it is worth far more than refusing the whole survey eight questions
@@ -165,18 +244,25 @@ export function SurveyWizard({
     setStatus("sending");
     setError(undefined);
 
-    const parsed = submittableResponseSchema.safeParse({ ...answersOf(draft), currency });
+    const parsed = submittableResponseSchema.safeParse({
+      ...answersShown(draft, stepIds, employed),
+      currency,
+      salaryPeriod,
+    });
     if (!parsed.success) {
       const field = String(parsed.error.issues[0]?.path[0] ?? "");
-      const target = STEP_OF_FIELD[field];
+      // Resolved against the screens this person is actually being shown, not
+      // against a fixed numbering: equity is question 8 for an employee and
+      // does not exist for a contractor.
+      const target = stepIds.indexOf(STEP_OF_FIELD[field] as StepId);
       setStatus("error");
       setError(
-        target === undefined
+        target === -1
           ? "Something in your answers could not be accepted. Please check and try again."
           : `We still need one answer from question ${target + 1}.`,
       );
       // Take them there rather than telling them to find it.
-      if (target !== undefined) goTo(target);
+      if (target !== -1) goTo(target);
       return;
     }
 
@@ -231,8 +317,9 @@ export function SurveyWizard({
     );
   }
 
-  const steps = [
+  const allSteps = [
     {
+      id: "where",
       title: "Where do you work?",
       body: (
         <>
@@ -262,6 +349,7 @@ export function SurveyWizard({
       complete: Boolean(draft.country),
     },
     {
+      id: "setup",
       title: "How do you work?",
       body: (
         <>
@@ -294,6 +382,7 @@ export function SurveyWizard({
       complete: true,
     },
     {
+      id: "contract",
       title: "What kind of contract?",
       hint: "This decides which figures your answer joins. Employee salaries and contractor day rates are published separately, because the same gross means something different under each.",
       body: (
@@ -305,21 +394,27 @@ export function SurveyWizard({
             onChange={(v) => set("contractType", v)}
             options={contractTypesFor(country)}
           />
-          <Field label="Hours" htmlFor="ftePercent" hint="Leave at 100 for full time.">
-            <NumberField
-              name="ftePercent"
-              value={draft.ftePercent as number}
-              onChange={(v) => set("ftePercent", v)}
-              min={10}
-              max={100}
-              suffix="% of full time"
-            />
-          </Field>
+          {/* A contractor has no full-time equivalent — they bill days, and
+              nothing reads this for them: `populationOf` returns "contractor"
+              before it ever looks at the percentage. */}
+          {employed && (
+            <Field label="Hours" htmlFor="ftePercent" hint="Leave at 100 for full time.">
+              <NumberField
+                name="ftePercent"
+                value={draft.ftePercent as number}
+                onChange={(v) => set("ftePercent", v)}
+                min={10}
+                max={100}
+                suffix="% of full time"
+              />
+            </Field>
+          )}
         </>
       ),
       complete: Boolean(draft.contractType),
     },
     {
+      id: "role",
       title: "What do you work on?",
       body: (
         <>
@@ -344,6 +439,7 @@ export function SurveyWizard({
       complete: true,
     },
     {
+      id: "level",
       title: "How senior are you?",
       hint: "Pick by what you do, not by your title — titles are not comparable between companies.",
       body: (
@@ -370,13 +466,18 @@ export function SurveyWizard({
       complete: Boolean(draft.level),
     },
     {
-      title: "What is your base salary?",
-      hint: "Gross, before tax. Quote it however you normally think about it.",
+      // A contractor does not have a base salary, they have a rate they quote
+      // clients. Asking the wrong noun invites the wrong number.
+      id: "pay",
+      title: employed ? "What is your base salary?" : "What do you charge?",
+      hint: employed
+        ? "Gross, before tax. Quote it however you normally think about it."
+        : "Gross, before tax and before your own contributions. Quote it however you bill it.",
       body: (
         <>
           <MoneyField
             name="baseSalary"
-            label="Base salary, gross"
+            label={employed ? "Base salary, gross" : "Your rate, gross"}
             value={draft.baseSalary as number}
             onChange={(v) => set("baseSalary", v)}
             currency={currency}
@@ -416,12 +517,22 @@ export function SurveyWizard({
             />
           )}
 
+          {/* Asked of an employee, optional for everybody else. An employee's
+              published figure is a year's income, so the days they worked
+              belong in it and we will not guess them. A contractor's published
+              figure is a price at a standard year, which their billed days do
+              not enter: requiring it made them answer a question we ignored,
+              and taking August off does not make anyone cheaper. */}
           {salaryPeriod === "day" && (
             <Field
               label="Days you billed last year"
               htmlFor="daysPerYear"
-              hint="Actual billed days, not a target — we multiply by this rather than guess a working year."
-              required
+              hint={
+                employed
+                  ? "Actual billed days, not a target — we multiply by this rather than guess a working year."
+                  : `Optional. Rates publish at a standard ${STANDARD_BILLED_DAYS}-day year, so this only sharpens the check below and the published dataset.`
+              }
+              required={employed}
             >
               <NumberField
                 name="daysPerYear"
@@ -438,8 +549,12 @@ export function SurveyWizard({
             <Field
               label="Hours you billed last year"
               htmlFor="hoursPerYear"
-              hint="Actual billed hours. Around 1,600 is a full year at 40 hours a week with holidays."
-              required
+              hint={
+                employed
+                  ? "Actual billed hours. Around 1,600 is a full year at 40 hours a week with holidays."
+                  : `Optional. Rates publish at a standard ${STANDARD_HOURS_PER_DAY}-hour day, so this only sharpens the check below and the published dataset.`
+              }
+              required={employed}
             >
               <NumberField
                 name="hoursPerYear"
@@ -459,10 +574,11 @@ export function SurveyWizard({
         salaryCheck?.verdict !== "impossible" &&
         (salaryPeriod === "year" ||
           (salaryPeriod === "month" && draft.paymentsPerYear != null) ||
-          (salaryPeriod === "day" && draft.daysPerYear != null) ||
-          (salaryPeriod === "hour" && draft.hoursPerYear != null)),
+          (salaryPeriod === "day" && (!employed || draft.daysPerYear != null)) ||
+          (salaryPeriod === "hour" && (!employed || draft.hoursPerYear != null))),
     },
     {
+      id: "bonus",
       title: "Any bonus?",
       hint: "What was actually paid in the last twelve months, not what was on target.",
       body: (
@@ -478,6 +594,7 @@ export function SurveyWizard({
       complete: true,
     },
     {
+      id: "equity",
       title: "Any equity?",
       hint: "Annualised value. Skip if none — most people have none, and that is useful to know.",
       body: (
@@ -504,13 +621,17 @@ export function SurveyWizard({
       complete: true,
     },
     {
-      title: "About the company",
-      hint: "Size bracket and industry only. We never ask which company.",
+      id: "company",
+      // A contractor's "company" is whoever they invoice.
+      title: employed ? "About the company" : "About the client",
+      hint: employed
+        ? "Size bracket and industry only. We never ask which company."
+        : "Size bracket and industry only. We never ask which client.",
       body: (
         <>
           <Choice
               name="companySize"
-              label="Company size"
+              label={employed ? "Company size" : "Client size"}
               value={draft.companySize as string}
               onChange={(v) => set("companySize", v)}
               options={COMPANY_SIZES}
@@ -530,8 +651,11 @@ export function SurveyWizard({
     },
   ];
 
+  // Built in full, then narrowed, so each screen's `complete` rule and body
+  // read the same however many are shown.
+  const steps = allSteps.filter((s) => stepIds.includes(s.id as StepId));
   const current = steps[step]!;
-  const last = step === TOTAL_STEPS - 1;
+  const last = step === lastStep;
 
   // When Turnstile is configured, wait for its token rather than letting
   // someone submit a finished survey and be told afterwards that we could not
@@ -545,7 +669,7 @@ export function SurveyWizard({
   const canSkipAhead = !last && step < furthestStep && current.complete;
   const nextTarget = canSkipAhead ? furthestStep : step + 1;
   const nextLabel = canSkipAhead
-    ? furthestStep === TOTAL_STEPS - 1
+    ? furthestStep === lastStep
       ? "Continue to submit"
       : "Continue"
     : "Next";
@@ -555,7 +679,7 @@ export function SurveyWizard({
       <div className="mb-8">
         <div className="mb-2 flex items-baseline justify-between text-xs text-ink-3">
           <span>
-            Question {step + 1} of {TOTAL_STEPS}
+            Question {step + 1} of {totalSteps}
           </span>
           {prefilled === 2 && step === 1 && <span>Two answered from the last page</span>}
         </div>
@@ -564,12 +688,12 @@ export function SurveyWizard({
           role="progressbar"
           aria-valuenow={step + 1}
           aria-valuemin={1}
-          aria-valuemax={TOTAL_STEPS}
+          aria-valuemax={totalSteps}
           aria-label="Survey progress"
         >
           <div
             className="h-full rounded-full bg-coral transition-[width] duration-300"
-            style={{ width: `${((step + 1) / TOTAL_STEPS) * 100}%` }}
+            style={{ width: `${((step + 1) / totalSteps) * 100}%` }}
           />
         </div>
       </div>

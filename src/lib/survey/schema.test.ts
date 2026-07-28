@@ -52,6 +52,57 @@ describe("responseSchema", () => {
   });
 });
 
+describe("a rate and its count", () => {
+  const rate = { ...minimal, baseSalary: 650, salaryPeriod: "day" } as const;
+
+  it("asks an employee for the days behind a day rate", () => {
+    // Their published figure is a year's income, so how much of the year they
+    // worked belongs in it and we will not guess it for them.
+    expect(submittableResponseSchema.safeParse(rate).success).toBe(false);
+    expect(submittableResponseSchema.safeParse({ ...rate, daysPerYear: 210 }).success).toBe(true);
+  });
+
+  it("does not ask a contractor, whose rate is published as a price", () => {
+    // It is derived at a standard year and their billed days never enter it,
+    // so requiring the count made them answer a question we then ignored.
+    for (const contractType of ["contractor", "b2b"] as const) {
+      expect(submittableResponseSchema.safeParse({ ...rate, contractType }).success).toBe(true);
+    }
+  });
+
+  it("still takes a contractor's count when they give one", () => {
+    expect(
+      submittableResponseSchema.safeParse({ ...rate, contractType: "b2b", daysPerYear: 120 })
+        .success,
+    ).toBe(true);
+  });
+
+  it("asks everybody for the number of monthly payments", () => {
+    // Not a working year but an answer: 12, 13 and 14 are all normal, and
+    // assuming twelve would understate a Spanish salary by a seventh.
+    const monthly = { ...minimal, baseSalary: 4_000, salaryPeriod: "month" } as const;
+    for (const contractType of ["permanent", "contractor"] as const) {
+      expect(submittableResponseSchema.safeParse({ ...monthly, contractType }).success).toBe(
+        false,
+      );
+    }
+    expect(submittableResponseSchema.safeParse({ ...monthly, paymentsPerYear: 14 }).success).toBe(
+      true,
+    );
+  });
+
+  it("still refuses a day rate that is impossible at any working year", () => {
+    // Dropping the count must not drop the typo check with it.
+    expect(
+      submittableResponseSchema.safeParse({
+        ...rate,
+        contractType: "contractor",
+        baseSalary: 650_000,
+      }).success,
+    ).toBe(false);
+  });
+});
+
 describe("submissionSchema", () => {
   const envelope = { response: minimal, formToken: "1.sig" };
 

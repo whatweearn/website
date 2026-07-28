@@ -1,3 +1,5 @@
+import { STANDARD_BILLED_DAYS, STANDARD_HOURS_PER_DAY } from "../stats/dayRate";
+
 import { type RateInput, annualOrNull } from "./annualise";
 
 /**
@@ -59,13 +61,38 @@ export type SalaryCheck = {
   message?: string;
 };
 
-/** Annualised and roughly converted to euro. Validation only. */
+/**
+ * Annualised and roughly converted to euro. Validation only.
+ *
+ * Falls back to the standard working year when a day or hour count is missing,
+ * which published figures never do. The two are different jobs: publishing a
+ * figure nobody supplied would be inventing data, while *declining to check* a
+ * figure is how a €650,000 day rate reaches the database untouched. A
+ * contractor is no longer asked for their billed days at all, so without this
+ * fallback the entire typo defence would be switched off for them.
+ */
 export function annualEuroApprox(input: RateInput & { currency: string }): number | null {
-  const annual = annualOrNull(input);
+  const annual = annualOrNull(atStandardYear(input));
   if (annual === null) return null;
   const perEur = APPROX_EUR_RATES[input.currency];
   if (!perEur || perEur <= 0) return null;
   return Math.round(annual / perEur);
+}
+
+/**
+ * The same rate with a standard multiplier where none was given.
+ *
+ * Their own count wins when they gave one: somebody who says they billed 140
+ * days should see the check run against the year they actually described.
+ */
+function atStandardYear<T extends RateInput>(input: T): T {
+  if (input.salaryPeriod === "day" && input.daysPerYear == null) {
+    return { ...input, daysPerYear: STANDARD_BILLED_DAYS };
+  }
+  if (input.salaryPeriod === "hour" && input.hoursPerYear == null) {
+    return { ...input, hoursPerYear: STANDARD_BILLED_DAYS * STANDARD_HOURS_PER_DAY };
+  }
+  return input;
 }
 
 const format = (value: number) =>
@@ -78,8 +105,10 @@ const format = (value: number) =>
 export function checkSalary(input: RateInput & { currency: string }): SalaryCheck {
   const annualEuro = annualEuroApprox(input);
 
-  // Cannot be judged — a missing multiplier is caught separately, and guessing
-  // one here just to run a bounds check would defeat the point.
+  // Cannot be judged: an unknown currency, or a monthly figure with no payment
+  // count. The latter is caught separately, and there is no standard to fall
+  // back on — 12, 13 and 14 are all normal, and picking one would be guessing
+  // at the answer rather than at the working year.
   if (annualEuro === null) return { verdict: "ok", annualEuro: null };
 
   if (annualEuro < SALARY_BOUNDS.impossible.min) {

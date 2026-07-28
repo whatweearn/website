@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isEmployeeContract } from "../stats/populations";
+
 import { checkSalary } from "./plausibility";
 import {
   COMPANY_SIZES,
@@ -90,12 +92,28 @@ export const submittableResponseSchema = responseSchema
     path: ["baseSalary"],
   })
   .refine(
-  (r) =>
-    r.salaryPeriod === "month" ? r.paymentsPerYear != null
-    : r.salaryPeriod === "day" ? r.daysPerYear != null
-    : r.salaryPeriod === "hour" ? r.hoursPerYear != null
-    : true,
-  { message: "A rate quoted per month, day or hour needs its count.", path: ["baseSalary"] },
+    (r) =>
+      r.salaryPeriod === "month"
+        ? r.paymentsPerYear != null
+        : // Only an employee's day or hour rate needs its count, because only
+          // an employee's figure is annualised: their published number is a
+          // year's income, and how many days they worked belongs in it.
+          //
+          // A contractor's published number is a price. It is derived at a
+          // standard year and their billed days never enter it, so requiring
+          // the count made people answer a question we then ignored — and
+          // ignoring it is the point, since a rate does not fall because
+          // somebody took August off.
+          !isEmployeeContract(r.contractType) ||
+          (r.salaryPeriod === "day"
+            ? r.daysPerYear != null
+            : r.salaryPeriod === "hour"
+              ? r.hoursPerYear != null
+              : true),
+    {
+      message: "A rate quoted per month, day or hour needs its count.",
+      path: ["baseSalary"],
+    },
   );
 
 /** What the client actually posts: the answers plus the anti-abuse envelope. */

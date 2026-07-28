@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { STANDARD_BILLED_DAYS } from "../stats/dayRate";
+
 import { COUNTRIES } from "./options";
 import { APPROX_EUR_RATES, annualEuroApprox, checkSalary } from "./plausibility";
 
@@ -99,11 +101,42 @@ describe("messages", () => {
   });
 });
 
-describe("unjudgeable input", () => {
-  it("stays silent when the multiplier is missing", () => {
-    // Guessing a working year purely to run a bounds check would reintroduce
-    // the assumption the survey exists to avoid.
+describe("a rate given without its count", () => {
+  /**
+   * Contractors are no longer asked for their billed days, because their
+   * published figure is a price derived at a standard year. That left the typo
+   * defence switched off for them: with no multiplier there was nothing to
+   * annualise, so every day rate was waved through however many digits it had.
+   */
+  it("still catches a typo in a day rate", () => {
     expect(verdict({ baseSalary: 650, salaryPeriod: "day", currency: "EUR" })).toBe("ok");
+    expect(verdict({ baseSalary: 650_000, salaryPeriod: "day", currency: "EUR" })).toBe(
+      "impossible",
+    );
+    expect(verdict({ baseSalary: 2, salaryPeriod: "day", currency: "EUR" })).toBe("impossible");
+  });
+
+  it("still catches a typo in an hourly rate", () => {
+    expect(verdict({ baseSalary: 90, salaryPeriod: "hour", currency: "EUR" })).toBe("ok");
+    expect(verdict({ baseSalary: 90_000, salaryPeriod: "hour", currency: "EUR" })).toBe(
+      "impossible",
+    );
+  });
+
+  it("uses their own count when they gave one", () => {
+    // The check runs against the year they described, not the standard one.
+    expect(annualEuroApprox({ baseSalary: 650, salaryPeriod: "day", currency: "EUR" })).toBe(
+      650 * STANDARD_BILLED_DAYS,
+    );
+    expect(
+      annualEuroApprox({ baseSalary: 650, salaryPeriod: "day", daysPerYear: 120, currency: "EUR" }),
+    ).toBe(78_000);
+  });
+
+  it("stays silent when there is no standard to fall back on", () => {
+    // 12, 13 and 14 payments are all normal, so a missing count is a question
+    // about the answer rather than about the working year.
+    expect(verdict({ baseSalary: 3_000, salaryPeriod: "month", currency: "EUR" })).toBe("ok");
   });
 
   it("stays silent on an unknown currency", () => {
