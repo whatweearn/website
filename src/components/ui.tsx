@@ -21,27 +21,27 @@ export const SHELL =
 export const SELECT_CONTROL = cx(SHELL, "appearance-none py-3 pr-10 pl-4 text-base text-ink");
 
 /*
- * The transition list names `translate`, not `transform`, and that is the whole
- * fix for a hover jump that lived here from the port.
+ * A button does not move on hover. The colour, the shadow and the arrow carry
+ * the state; the box stays where it is.
  *
- * Tailwind v4 compiles `-translate-y-px` to the standalone **`translate`**
- * property — `translate: var(--tw-translate-x) var(--tw-translate-y)` — not to
- * `transform`, which is what v3 did and what this list was written against.
- * Nothing on a button ever sets `transform`, so the 200ms was being spent on a
- * property that never changed and the 1px lift landed instantly: the button
- * snapped up on hover and snapped back on leave. It read as a jump rather than
- * a lift, and it was most obvious on the arrow buttons, because the arrow's own
- * `transition-transform` *does* cover translate (v4 expands that shorthand to
- * `transform, translate, scale, rotate`) so the glyph glided while the button
- * under it popped.
+ * It used to rise a pixel, and the pixel was never the point — it was there to
+ * say *interactive*, which the arrow already says, and better, because it says
+ * it in the direction the click is going to take you. Two things moving at once
+ * on a control this small is one too many.
  *
- * Prefer the `transition-transform` shorthand where the whole set is wanted.
- * An arbitrary list is the place this goes wrong, because a stale property name
- * in one silently disables the transition instead of failing.
+ * So the transition list below has no `translate` in it, and if you ever add a
+ * movement back, put `translate` in the list rather than `transform`: Tailwind
+ * v4 compiles `-translate-y-px` to the standalone `translate` property, not to
+ * `transform` the way v3 did. Naming `transform` here transitions nothing and
+ * the movement lands in a single frame, which is how the lift came to snap
+ * instead of glide. The `transition-transform` shorthand is the safer spelling —
+ * v4 expands it to `transform, translate, scale, rotate`, so it cannot go stale.
+ * That is what the arrow uses, and it is why the arrow was gliding smoothly over
+ * a button that was popping.
  */
 const BUTTON_BASE =
   "inline-flex items-center justify-center gap-2 rounded-full font-display " +
-  "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,translate,border-color,color] " +
+  "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,border-color,color] " +
   "duration-200 group";
 
 /**
@@ -92,8 +92,8 @@ const SIZES = {
  */
 const VARIANTS = {
   coral:
-    "bg-accent text-on-accent border border-transparent shadow-sm hover:bg-accent-hover hover:shadow-md hover:-translate-y-px",
-  ink: "bg-ink text-on-ink border border-transparent shadow-sm hover:bg-accent-hover hover:text-on-accent hover:-translate-y-px",
+    "bg-accent text-on-accent border border-transparent shadow-sm hover:bg-accent-hover hover:shadow-md",
+  ink: "bg-ink text-on-ink border border-transparent shadow-sm hover:bg-accent-hover hover:text-on-accent",
   ghost: "bg-transparent text-ink border border-line-2 hover:bg-tint hover:border-ink-3",
 } as const;
 
