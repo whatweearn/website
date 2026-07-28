@@ -18,6 +18,8 @@ import {
   contractTypesFor,
   type CountryCode,
 } from "@/lib/survey/options";
+import { STANDARD_BILLED_DAYS, STANDARD_HOURS_PER_DAY } from "@/lib/stats/dayRate";
+import { isEmployeeContract } from "@/lib/stats/populations";
 import { checkSalary } from "@/lib/survey/plausibility";
 import { submittableResponseSchema } from "@/lib/survey/schema";
 import type { Answered } from "@/lib/survey/standing";
@@ -142,9 +144,16 @@ export function SurveyWizard({
   // shown as already filled in.
   const currency = (draft.currency as string | undefined) ?? defaultCurrency(country);
 
-  // Defaults to a yearly figure: what most employees will answer, and what the
-  // survey asked for before periods existed.
-  const salaryPeriod = (draft.salaryPeriod as string | undefined) ?? "year";
+  // Defaulted from the contract, because the two groups think in different
+  // units: an employee knows their annual or monthly salary, and a contractor
+  // knows their day rate. It is also the unit each one's figures are published
+  // in, so the default quietly lines up with what we can actually use.
+  //
+  // Like the currency default, this has to be *submitted* rather than merely
+  // shown — see the payload below. A default the server never receives is a
+  // silent corruption: a €650 day rate stored as a yearly salary.
+  const employed = isEmployeeContract((draft.contractType as string) ?? "");
+  const salaryPeriod = (draft.salaryPeriod as string | undefined) ?? (employed ? "year" : "day");
 
   // Checked as they type. Catching a mistyped figure on the screen that asks
   // for it is worth far more than refusing the whole survey eight questions
@@ -165,7 +174,11 @@ export function SurveyWizard({
     setStatus("sending");
     setError(undefined);
 
-    const parsed = submittableResponseSchema.safeParse({ ...answersOf(draft), currency });
+    const parsed = submittableResponseSchema.safeParse({
+      ...answersOf(draft),
+      currency,
+      salaryPeriod,
+    });
     if (!parsed.success) {
       const field = String(parsed.error.issues[0]?.path[0] ?? "");
       const target = STEP_OF_FIELD[field];
@@ -370,13 +383,17 @@ export function SurveyWizard({
       complete: Boolean(draft.level),
     },
     {
-      title: "What is your base salary?",
-      hint: "Gross, before tax. Quote it however you normally think about it.",
+      // A contractor does not have a base salary, they have a rate they quote
+      // clients. Asking the wrong noun invites the wrong number.
+      title: employed ? "What is your base salary?" : "What do you charge?",
+      hint: employed
+        ? "Gross, before tax. Quote it however you normally think about it."
+        : "Gross, before tax and before your own contributions. Quote it however you bill it.",
       body: (
         <>
           <MoneyField
             name="baseSalary"
-            label="Base salary, gross"
+            label={employed ? "Base salary, gross" : "Your rate, gross"}
             value={draft.baseSalary as number}
             onChange={(v) => set("baseSalary", v)}
             currency={currency}
@@ -416,12 +433,22 @@ export function SurveyWizard({
             />
           )}
 
+          {/* Asked of an employee, optional for everybody else. An employee's
+              published figure is a year's income, so the days they worked
+              belong in it and we will not guess them. A contractor's published
+              figure is a price at a standard year, which their billed days do
+              not enter: requiring it made them answer a question we ignored,
+              and taking August off does not make anyone cheaper. */}
           {salaryPeriod === "day" && (
             <Field
               label="Days you billed last year"
               htmlFor="daysPerYear"
-              hint="Actual billed days, not a target — we multiply by this rather than guess a working year."
-              required
+              hint={
+                employed
+                  ? "Actual billed days, not a target — we multiply by this rather than guess a working year."
+                  : `Optional. Rates publish at a standard ${STANDARD_BILLED_DAYS}-day year, so this only sharpens the check below and the published dataset.`
+              }
+              required={employed}
             >
               <NumberField
                 name="daysPerYear"
@@ -438,8 +465,12 @@ export function SurveyWizard({
             <Field
               label="Hours you billed last year"
               htmlFor="hoursPerYear"
-              hint="Actual billed hours. Around 1,600 is a full year at 40 hours a week with holidays."
-              required
+              hint={
+                employed
+                  ? "Actual billed hours. Around 1,600 is a full year at 40 hours a week with holidays."
+                  : `Optional. Rates publish at a standard ${STANDARD_HOURS_PER_DAY}-hour day, so this only sharpens the check below and the published dataset.`
+              }
+              required={employed}
             >
               <NumberField
                 name="hoursPerYear"
@@ -459,8 +490,8 @@ export function SurveyWizard({
         salaryCheck?.verdict !== "impossible" &&
         (salaryPeriod === "year" ||
           (salaryPeriod === "month" && draft.paymentsPerYear != null) ||
-          (salaryPeriod === "day" && draft.daysPerYear != null) ||
-          (salaryPeriod === "hour" && draft.hoursPerYear != null)),
+          (salaryPeriod === "day" && (!employed || draft.daysPerYear != null)) ||
+          (salaryPeriod === "hour" && (!employed || draft.hoursPerYear != null))),
     },
     {
       title: "Any bonus?",

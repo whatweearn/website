@@ -395,9 +395,14 @@ test.describe("the notification list", () => {
 });
 
 test.describe("pay quoted per day", () => {
-  test("asks for the multiplier and will not proceed without it", async ({ page }) => {
-    // The population this exists for: a freelancer who thinks in a day rate and
-    // has no idea what their "annual salary" is.
+  test("lets a freelancer answer in the unit they think in, and nothing else", async ({
+    page,
+  }) => {
+    // The population this exists for: a freelancer who thinks in a day rate
+    // and has no idea what their "annual salary" is. They now type one number
+    // and move on — the period is already right, and the billed-days count
+    // that used to block them was only ever needed to annualise, which their
+    // published figure no longer does.
     await page.goto("/survey");
     await page.getByLabel("Country").selectOption("FR");
     await next(page);
@@ -408,17 +413,8 @@ test.describe("pay quoted per day", () => {
     await page.getByText("Senior", { exact: true }).click();
     await next(page);
 
+    await expect(page.getByLabel("Pay period")).toHaveValue("day");
     await page.getByRole("spinbutton").first().fill("650");
-    // 650 a year is not a salary, and the sanity check says so.
-    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
-
-    await page.getByLabel("Pay period").selectOption("day");
-    await expect(page.getByLabel(/Days you billed/)).toBeVisible();
-    // Still blocked: annualising on a guessed working year would swing the
-    // figure by 15%, so the count is required rather than assumed.
-    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
-
-    await page.getByLabel(/Days you billed/).fill("210");
     await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
   });
 
@@ -442,12 +438,16 @@ test.describe("pay quoted per day", () => {
 });
 
 test.describe("salary sanity checks", () => {
-  async function reachSalary(page: Page, country: string) {
+  async function reachSalary(
+    page: Page,
+    country: string,
+    contract: "Permanent employee" | "Contractor / freelance" = "Permanent employee",
+  ) {
     await page.goto("/survey");
     await page.getByLabel("Country").selectOption(country);
     await next(page);
     await next(page);
-    await page.getByText("Permanent employee").click();
+    await page.getByText(contract).click();
     await next(page);
     await next(page);
     await page.getByText("Senior", { exact: true }).click();
@@ -493,6 +493,51 @@ test.describe("salary sanity checks", () => {
     await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
   });
 
+  test("starts a contractor on a day rate and an employee on a year", async ({ page }) => {
+    // The two groups think in different units, and it is also the unit each
+    // one's figures are published in. Getting this wrong silently stores a
+    // €650 day rate as a €650 salary, so the default has to be submitted and
+    // not merely displayed.
+    await reachSalary(page, "FR", "Contractor / freelance");
+    await expect(page.getByLabel("Pay period")).toHaveValue("day");
+
+    // The draft would otherwise resume this run at question six, where there
+    // is no country select to answer.
+    await page.evaluate(() => localStorage.clear());
+    await reachSalary(page, "FR");
+    await expect(page.getByLabel("Pay period")).toHaveValue("year");
+  });
+
+  test("does not make a contractor count the days they billed", async ({ page }) => {
+    // Their rate is published as a price at a standard year, so the count was
+    // a required question whose answer we then ignored.
+    await reachSalary(page, "FR", "Contractor / freelance");
+    await page.getByRole("spinbutton").first().fill("650");
+
+    await expect(page.getByText(/Optional\. Rates publish at a standard 220-day year/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("still asks an employee for the days behind a day rate", async ({ page }) => {
+    // Theirs is annualised into a year's income, where the days worked belong.
+    await reachSalary(page, "FR");
+    await page.getByRole("spinbutton").first().fill("650");
+    await page.getByLabel("Pay period").selectOption("day");
+
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
+    await page.getByLabel(/Days you billed/).fill("210");
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("still refuses a day rate that is impossible at any working year", async ({ page }) => {
+    // Dropping the required count must not drop the typo check with it.
+    await reachSalary(page, "FR", "Contractor / freelance");
+    await page.getByRole("spinbutton").first().fill("650000");
+
+    await expect(page.getByText(/works out to about/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
+  });
+
   test("accepts a day rate that would be impossible as a yearly figure", async ({ page }) => {
     await reachSalary(page, "FR");
     await page.getByRole("spinbutton").first().fill("650");
@@ -522,12 +567,9 @@ test.describe("the confirmation screen", () => {
     await next(page);
 
     if (contract === "Contractor / freelance") {
+      // No period to choose and no billed days to fill: both are the point of
+      // the assertions in "the salary screen" below.
       await page.getByRole("spinbutton").first().fill("650");
-      await page.getByLabel("Pay period").selectOption("day");
-      // Still asked for, because an employee quoting a day rate needs it to
-      // annualise. A contractor's own figures no longer depend on it: their
-      // rate is published as a price, at a standard year.
-      await page.getByLabel(/Days you billed/).fill("210");
     } else {
       await page.getByRole("spinbutton").first().fill("78000");
     }
