@@ -2,7 +2,13 @@ import { NextResponse } from "next/server";
 
 import { getRepository } from "@/lib/repository";
 import { COUNTRIES } from "@/lib/survey/options";
-import { COUNTRY_PUBLISH_MIN, responsesUntilPublish } from "@/lib/thresholds";
+import {
+  COUNTRY_PUBLISH_MIN,
+  DAY_RATE_PUBLISH_MIN,
+  dayRatesUntilPublish,
+  isDayRatePublishable,
+  responsesUntilPublish,
+} from "@/lib/thresholds";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -25,7 +31,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unknown country." }, { status: 400 });
   }
 
-  const responses = await getRepository().countForCountry(country.code);
+  const repository = getRepository();
+  const [responses, dayRates] = await Promise.all([
+    repository.countForCountry(country.code),
+    repository.countDayRatesForCountry(country.code),
+  ]);
 
   return NextResponse.json(
     {
@@ -34,6 +44,13 @@ export async function GET(request: Request) {
       remaining: responsesUntilPublish(responses),
       threshold: COUNTRY_PUBLISH_MIN,
       published: responses >= COUNTRY_PUBLISH_MIN,
+      // The contractor cut has its own count and its own, lower threshold. A
+      // contractor is absent from the headline count by design, so quoting
+      // them only that one describes a figure they cannot move.
+      dayRates,
+      dayRatesRemaining: dayRatesUntilPublish(dayRates),
+      dayRateThreshold: DAY_RATE_PUBLISH_MIN,
+      dayRatesPublished: isDayRatePublishable(dayRates),
     },
     { headers: { "cache-control": "no-store" } },
   );

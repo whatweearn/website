@@ -69,6 +69,28 @@ export class PostgresResponseRepository implements ResponseRepository {
     return rows[0]?.n ?? 0;
   }
 
+  /**
+   * Quoted day rates for the contractor cut, mirroring {@link isDayRateEligible}.
+   *
+   * Only rates actually given per day, and only from people who are not
+   * employees. Both halves of that rule are in the TypeScript version for
+   * reasons worth reading there; this query exists so the confirmation screen
+   * can tell a contractor how close their own figures are, rather than quoting
+   * them a threshold their answer does not count towards.
+   */
+  async countDayRatesForCountry(country: string): Promise<number> {
+    const sql = db();
+    const rows = await sql<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM responses
+      WHERE country = ${country}
+        AND superseded_by IS NULL
+        AND excluded_reason IS NULL
+        AND NOT (contract_type = ANY(${sql.array([...EMPLOYEE_CONTRACTS])}))
+        AND salary_period = 'day'
+    `;
+    return rows[0]?.n ?? 0;
+  }
+
   async hasSubmittedToday(handle: string): Promise<boolean> {
     const sql = db();
     const rows = await sql<{ exists: boolean }[]>`

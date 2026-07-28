@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { EMPLOYEE_CONTRACTS, MIN_FTE_PERCENT, isHeadlineEligible } from "../stats/eligibility";
+import {
+  EMPLOYEE_CONTRACTS,
+  MIN_FTE_PERCENT,
+  isDayRateEligible,
+  isHeadlineEligible,
+} from "../stats/eligibility";
 import { annualise } from "../survey/annualise";
 import { AGGREGATE_SELECT_LIST, AGGREGATE_WHERE } from "./responseRepository";
 
@@ -263,6 +268,59 @@ describe("headline eligibility in SQL", () => {
       [COUNTRY],
     );
     expect(stored.rows[0]!.n).toBe(cases.length);
+  });
+});
+
+describe("day-rate eligibility in SQL", () => {
+  /**
+   * The same two-implementations problem as the headline count above, and it
+   * reaches the same screen: the confirmation tells a contractor how close
+   * their country's day-rate median is, so this query and
+   * {@link isDayRateEligible} have to agree on which answers are in it.
+   */
+  const cases: { contractType: string; salaryPeriod: string | null }[] = [
+    { contractType: "contractor", salaryPeriod: "day" },
+    { contractType: "b2b", salaryPeriod: "day" },
+    { contractType: "contractor", salaryPeriod: "year" },
+    { contractType: "contractor", salaryPeriod: "hour" },
+    { contractType: "contractor", salaryPeriod: null },
+    // An employee quoting a day rate is not pricing the same thing.
+    { contractType: "permanent", salaryPeriod: "day" },
+    { contractType: "fixed_term", salaryPeriod: "day" },
+  ];
+
+  // Its own code: these rows share a table with every other block's, and the
+  // aggregation test below reads row zero of "YY".
+  const COUNTRY = "XX";
+
+  beforeAll(async () => {
+    for (const [i, c] of cases.entries()) {
+      await db.query(
+        `INSERT INTO responses
+           (submitted_on, handle, country, contract_type, salary_period, level, base_salary, currency)
+         VALUES ('2026-07-24', $1, $2, $3, $4, 'senior', 650, 'EUR')`,
+        [`day-rate-${i}`, COUNTRY, c.contractType, c.salaryPeriod],
+      );
+    }
+  });
+
+  it("counts exactly the rates the contractor cut would publish on", async () => {
+    const rows = await db.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM responses
+       WHERE country = $1
+         AND superseded_by IS NULL
+         AND excluded_reason IS NULL
+         AND NOT (contract_type = ANY($2))
+         AND salary_period = 'day'`,
+      [COUNTRY, [...EMPLOYEE_CONTRACTS]],
+    );
+
+    const expected = cases.filter((c) =>
+      isDayRateEligible({ contractType: c.contractType, ftePercent: null, salaryPeriod: c.salaryPeriod }),
+    ).length;
+    expect(rows.rows[0]!.n).toBe(expected);
+    expect(expected).toBeGreaterThan(0);
+    expect(expected).toBeLessThan(cases.length);
   });
 });
 

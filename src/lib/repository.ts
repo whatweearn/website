@@ -1,6 +1,6 @@
 import { hasDatabase } from "./db/client";
 import { PostgresResponseRepository } from "./db/responseRepository";
-import { isHeadlineEligible } from "./stats/eligibility";
+import { isDayRateEligible, isHeadlineEligible } from "./stats/eligibility";
 import type { SurveyResponse } from "./survey/schema";
 
 /**
@@ -37,6 +37,14 @@ export interface ResponseRepository {
    * manipulation could chase.
    */
   countForCountry(country: string): Promise<number>;
+  /**
+   * How many quoted contractor day rates a country has right now.
+   *
+   * The confirmation screen needs it for the same reason it needs the headline
+   * count: a contractor's answer is deliberately absent from that one, so it
+   * is the only cut that can honestly tell them where their answer landed.
+   */
+  countDayRatesForCountry(country: string): Promise<number>;
 }
 
 /**
@@ -67,6 +75,18 @@ class InMemoryRepository implements ResponseRepository {
         isHeadlineEligible({
           contractType: r.response.contractType,
           ftePercent: r.response.ftePercent ?? null,
+        }),
+    ).length;
+  }
+
+  async countDayRatesForCountry(country: string): Promise<number> {
+    return this.records.filter(
+      (r) =>
+        r.response.country === country &&
+        isDayRateEligible({
+          contractType: r.response.contractType,
+          ftePercent: r.response.ftePercent ?? null,
+          salaryPeriod: r.response.salaryPeriod ?? null,
         }),
     ).length;
   }

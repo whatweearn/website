@@ -20,6 +20,7 @@ import {
 } from "@/lib/survey/options";
 import { checkSalary } from "@/lib/survey/plausibility";
 import { submittableResponseSchema } from "@/lib/survey/schema";
+import type { Answered } from "@/lib/survey/standing";
 
 import { cx } from "../ui";
 import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
@@ -95,9 +96,11 @@ export function SurveyWizard({
     step,
   );
   const [status, setStatus] = useState<"editing" | "sending" | "done" | "error">("editing");
-  // Captured before the draft is cleared: the confirmation screen needs it to
-  // show how close that country is to publishing.
+  // Captured before the draft is cleared: the confirmation screen needs the
+  // country to show how close it is to publishing, and the contract to know
+  // which of the two published cuts this answer actually joined.
   const [submittedCountry, setSubmittedCountry] = useState<string>();
+  const [submittedAnswer, setSubmittedAnswer] = useState<Answered>();
   const [turnstileToken, setTurnstileToken] = useState<string>();
   const [turnstileFailed, setTurnstileFailed] = useState(false);
   const [turnstileAttempt, setTurnstileAttempt] = useState(0);
@@ -196,6 +199,11 @@ export function SurveyWizard({
       }
 
       setSubmittedCountry(parsed.data.country);
+      setSubmittedAnswer({
+        contractType: parsed.data.contractType,
+        ftePercent: parsed.data.ftePercent ?? null,
+        salaryPeriod: parsed.data.salaryPeriod ?? null,
+      });
       clearDraft();
       setStatus("done");
     } catch {
@@ -205,7 +213,7 @@ export function SurveyWizard({
   }
 
   if (status === "done") {
-    return <Confirmation country={submittedCountry} />;
+    return <Confirmation country={submittedCountry} answer={submittedAnswer} />;
   }
 
   const steps = [
