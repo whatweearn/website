@@ -20,9 +20,28 @@ export const SHELL =
  */
 export const SELECT_CONTROL = cx(SHELL, "appearance-none py-3 pr-10 pl-4 text-base text-ink");
 
+/*
+ * The transition list names `translate`, not `transform`, and that is the whole
+ * fix for a hover jump that lived here from the port.
+ *
+ * Tailwind v4 compiles `-translate-y-px` to the standalone **`translate`**
+ * property — `translate: var(--tw-translate-x) var(--tw-translate-y)` — not to
+ * `transform`, which is what v3 did and what this list was written against.
+ * Nothing on a button ever sets `transform`, so the 200ms was being spent on a
+ * property that never changed and the 1px lift landed instantly: the button
+ * snapped up on hover and snapped back on leave. It read as a jump rather than
+ * a lift, and it was most obvious on the arrow buttons, because the arrow's own
+ * `transition-transform` *does* cover translate (v4 expands that shorthand to
+ * `transform, translate, scale, rotate`) so the glyph glided while the button
+ * under it popped.
+ *
+ * Prefer the `transition-transform` shorthand where the whole set is wanted.
+ * An arbitrary list is the place this goes wrong, because a stale property name
+ * in one silently disables the transition instead of failing.
+ */
 const BUTTON_BASE =
   "inline-flex items-center justify-center gap-2 rounded-full font-display " +
-  "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,transform,border-color,color] " +
+  "leading-none whitespace-nowrap no-underline cursor-pointer transition-[background-color,box-shadow,translate,border-color,color] " +
   "duration-200 group";
 
 /**

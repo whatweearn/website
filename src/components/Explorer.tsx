@@ -214,7 +214,8 @@ function PopulationChoice({
             key={p}
             type="button"
             onClick={() => onChoose(p)}
-            className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5 text-left transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-[2px] hover:border-line-2 hover:shadow-md"
+            // `translate`, not `transform` — see the note on BUTTON_BASE in ui.tsx.
+            className="flex flex-col gap-1 rounded-lg border border-line bg-surface p-5 text-left transition-[translate,box-shadow,border-color] duration-200 hover:-translate-y-[2px] hover:border-line-2 hover:shadow-md"
           >
             <span className="font-display text-lg font-semibold">
               {POPULATION_LABELS[p].long}

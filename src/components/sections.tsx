@@ -343,7 +343,8 @@ export function Payoff({ published }: { published: boolean }) {
           {TILES.map((tile) => (
             <article
               key={tile.title}
-              className="flex flex-col gap-2.5 rounded-lg border border-line bg-surface p-6 shadow-sm transition-[transform,box-shadow] duration-200 hover:-translate-y-[3px] hover:shadow-md"
+              // `translate`, not `transform` — see the note on BUTTON_BASE in ui.tsx.
+              className="flex flex-col gap-2.5 rounded-lg border border-line bg-surface p-6 shadow-sm transition-[translate,box-shadow] duration-200 hover:-translate-y-[3px] hover:shadow-md"
             >
               <span className="mb-2 grid size-[38px] place-items-center rounded-md bg-wash text-accent">
                 <tile.Icon />
