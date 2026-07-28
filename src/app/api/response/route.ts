@@ -91,10 +91,19 @@ export async function POST(request: Request) {
 
   const repository = getRepository();
 
-  // A duplicate is not an error worth surfacing — the visitor gets the same
-  // confirmation either way, and we quietly keep the first answer.
+  // A duplicate is told so. The screen used to be identical either way, which
+  // meant the confirmation reported a country's progress as though the visitor
+  // had just moved it, when nothing had been stored at all.
+  //
+  // `{ duplicate: true }` is the only thing this route ever returns, and it is
+  // deliberately not an identifier: it says something about *this request*, not
+  // about which row exists. Nothing here can be presented back to us later to
+  // point at a response. It does tell a caller whether this address and browser
+  // already answered today, which the privacy page and the methodology page
+  // both already describe; a bot learns nothing from it that submitting twice
+  // would not have shown anyway.
   if (await repository.hasSubmittedToday(handle)) {
-    return new NextResponse(null, { status: 204 });
+    return NextResponse.json({ duplicate: true }, { status: 200 });
   }
 
   await repository.save({

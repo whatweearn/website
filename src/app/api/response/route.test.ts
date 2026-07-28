@@ -126,7 +126,7 @@ describe("POST /api/response", () => {
     expect(res.status).toBe(400);
   });
 
-  it("quietly keeps the first answer when someone submits twice", async () => {
+  it("keeps the first answer when someone submits twice, and says so", async () => {
     const headers = { "x-forwarded-for": "198.51.100.4" };
     await post({ response: validResponse, formToken: goodToken() }, headers);
     const second = await post(
@@ -134,9 +134,21 @@ describe("POST /api/response", () => {
       headers,
     );
 
-    // Same confirmation either way — a duplicate is not the visitor's problem.
-    expect(second.status).toBe(204);
+    // Silence here used to mean the confirmation screen reported the country's
+    // progress as though this answer had moved it, when nothing was stored.
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual({ duplicate: true });
     expect(repository.size).toBe(1);
+  });
+
+  it("tells a duplicate nothing beyond the fact that it was one", async () => {
+    // Still no identifier: a flag about this request cannot be presented back
+    // to us later to point at a row. See CLAUDE.md §4.
+    const headers = { "x-forwarded-for": "198.51.100.7" };
+    await post({ response: validResponse, formToken: goodToken() }, headers);
+    const second = await post({ response: validResponse, formToken: goodToken() }, headers);
+
+    expect(Object.keys((await second.json()) as object)).toEqual(["duplicate"]);
   });
 
   it("rate limits a flood from one handle", async () => {

@@ -1,6 +1,6 @@
 import type { ResponseRepository, StoredResponse } from "../repository";
 import type { AggregateRow } from "../stats/aggregate";
-import { EMPLOYEE_CONTRACTS, MIN_FTE_PERCENT } from "../stats/eligibility";
+import { EMPLOYEE_CONTRACTS, MIN_FTE_PERCENT, type Population } from "../stats/populations";
 
 import { db } from "./client";
 
@@ -40,33 +40,41 @@ export class PostgresResponseRepository implements ResponseRepository {
   }
 
   /**
-   * How many responses count towards this country's headline median.
+   * How many responses each population has in this country, right now.
    *
-   * Not every stored response does. The contract-type and full-time filters
-   * mirror {@link isHeadlineEligible}, which is what the nightly aggregation
-   * applies before deciding whether a country publishes. Counting every row
-   * instead — as this did until it was corrected — made the confirmation
-   * screen promise "13 more" for a country that would then not publish,
-   * because a dozen of the rows counted were B2B, freelance or part-time.
+   * The three branches mirror {@link populationOf} exactly, because these are
+   * the numbers the confirmation screen turns into "21 more and Italy's
+   * contractor day rates publish". If the split here disagreed with the split
+   * the nightly aggregation applies, the site would promise a publication the
+   * aggregation then declines to make.
    *
-   * Still slightly optimistic: the aggregation also drops rows it cannot
-   * annualise (a day or hour rate with no count) or convert (no FX rate for
-   * the day). Both are rare and neither is expressible here without
-   * duplicating the whole conversion pipeline in SQL. The remaining error is
-   * small and in the same direction for every country, where it used to be
-   * large and to vary with how many contractors a country attracts.
+   * Slightly optimistic in one direction: the aggregation also drops rows it
+   * cannot annualise (a monthly figure with no payment count) or convert (no
+   * exchange rate for the day). Both are rare, and neither is expressible here
+   * without duplicating the conversion pipeline in SQL.
    */
-  async countForCountry(country: string): Promise<number> {
+  async countByPopulation(country: string): Promise<Record<Population, number>> {
     const sql = db();
-    const rows = await sql<{ n: number }[]>`
-      SELECT count(*)::int AS n FROM responses
+    const employed = sql`contract_type = ANY(${sql.array([...EMPLOYEE_CONTRACTS])})`;
+    const fullTime = sql`(fte_percent IS NULL OR fte_percent >= ${MIN_FTE_PERCENT})`;
+
+    const rows = await sql<{ employee: number; part_time: number; contractor: number }[]>`
+      SELECT
+        count(*) FILTER (WHERE ${employed} AND ${fullTime})::int       AS employee,
+        count(*) FILTER (WHERE ${employed} AND NOT ${fullTime})::int   AS part_time,
+        count(*) FILTER (WHERE NOT ${employed})::int                   AS contractor
+      FROM responses
       WHERE country = ${country}
         AND superseded_by IS NULL
         AND excluded_reason IS NULL
-        AND contract_type = ANY(${sql.array([...EMPLOYEE_CONTRACTS])})
-        AND (fte_percent IS NULL OR fte_percent >= ${MIN_FTE_PERCENT})
     `;
-    return rows[0]?.n ?? 0;
+
+    const row = rows[0];
+    return {
+      employee: row?.employee ?? 0,
+      part_time: row?.part_time ?? 0,
+      contractor: row?.contractor ?? 0,
+    };
   }
 
   async hasSubmittedToday(handle: string): Promise<boolean> {

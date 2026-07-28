@@ -11,6 +11,34 @@ import {
   totalCount,
 } from "./stats";
 
+/** A country row for one population, defaulting to full-time employees. */
+function row(
+  name: string,
+  responses: number,
+  over: Partial<SiteStats["countries"][number]> = {},
+): SiteStats["countries"][number] {
+  return {
+    population: "employee",
+    code: name.slice(0, 2).toUpperCase(),
+    name,
+    currency: "EUR",
+    responses,
+    median: null,
+    p25: null,
+    p75: null,
+    ...over,
+  };
+}
+
+function statsWith(countries: SiteStats["countries"]): SiteStats {
+  return {
+    totalResponses: countries.reduce((sum, c) => sum + c.responses, 0),
+    countriesCovered: new Set(countries.map((c) => c.code)).size,
+    cuts: {},
+    countries,
+  };
+}
+
 /** Flat distribution: 10 bins of 10 across 0–100,000. Easy to reason about. */
 const flat: Distribution = {
   n: 100,
@@ -96,15 +124,19 @@ describe("the shipped dataset", () => {
   });
 
   it("leaves no histogram bucket holding an identifiable handful of people", async () => {
-    const { europe } = await getSiteStats();
-    for (const bin of europe?.bins ?? []) {
-      expect(bin.count === 0 || bin.count >= MIN_CELL_SIZE).toBe(true);
+    const stats = await getSiteStats();
+    for (const cut of Object.values(stats.cuts)) {
+      for (const bin of cut.distribution?.bins ?? []) {
+        expect(bin.count === 0 || bin.count >= MIN_CELL_SIZE).toBe(true);
+      }
     }
   });
 
   it("keeps the summary counts consistent with the country list", async () => {
     const stats = await getSiteStats();
-    expect(stats.countriesCovered).toBe(stats.countries.length);
+    // One row per population per country, so the distinct countries covered is
+    // never more than the rows and usually fewer.
+    expect(stats.countriesCovered).toBe(new Set(stats.countries.map((c) => c.code)).size);
     expect(stats.totalResponses).toBeGreaterThanOrEqual(
       stats.countries.reduce((sum, c) => sum + c.responses, 0),
     );
@@ -112,40 +144,28 @@ describe("the shipped dataset", () => {
 });
 
 describe("publishableCountries", () => {
-  it("keeps only countries at or above the publication threshold", () => {
-    const rows = publishableCountries({
-      totalResponses: 100,
-      countriesCovered: 3,
-      europe: null,
-      cuts: {},
-      countries: [
-        { name: "Germany", currency: "EUR", responses: 60, median: 70_000, p25: null, p75: null },
-        { name: "Portugal", currency: "EUR", responses: 59, median: null, p25: null, p75: null },
-        { name: "Czechia", currency: "CZK", responses: 5, median: null, p25: null, p75: null },
-      ],
-    });
+  it("keeps only countries at or above their population's threshold", () => {
+    const rows = publishableCountries(
+      statsWith([
+        row("Germany", 60, { median: 70_000 }),
+        row("Portugal", 59),
+        row("Czechia", 5, { currency: "CZK" }),
+      ]),
+      "employee",
+    );
     expect(rows.map((r) => r.name)).toEqual(["Germany"]);
+  });
+
+  it("does not mix one population's rows into another's", () => {
+    const stats = statsWith([
+      row("Germany", 60, { median: 70_000 }),
+      row("Germany", 30, { population: "contractor", median: 650 }),
+    ]);
+    expect(publishableCountries(stats, "contractor").map((r) => r.median)).toEqual([650]);
   });
 });
 
 describe("countriesNearingPublication", () => {
-  const statsWith = (countries: SiteStats["countries"]): SiteStats => ({
-    totalResponses: countries.reduce((sum, c) => sum + c.responses, 0),
-    countriesCovered: countries.length,
-    europe: null,
-    cuts: {},
-    countries,
-  });
-
-  const row = (name: string, responses: number, median: number | null = null) => ({
-    name,
-    currency: "EUR",
-    responses,
-    median,
-    p25: null,
-    p75: null,
-  });
-
   it("ranks the unpublished countries by how close they are", () => {
     const rows = countriesNearingPublication(
       statsWith([row("Portugal", 12), row("Germany", 47), row("Spain", 30)]),
@@ -153,11 +173,24 @@ describe("countriesNearingPublication", () => {
     expect(rows.map((r) => r.name)).toEqual(["Germany", "Spain", "Portugal"]);
   });
 
+  it("ranks by the share of the threshold reached, not by raw count", () => {
+    // 20 contractor day rates is five short of publishing; 20 salaries is
+    // forty short. Ranking those by count alone puts the far one first and
+    // sends people to the wrong gap.
+    const rows = countriesNearingPublication(
+      statsWith([
+        row("Germany", 25),
+        row("Poland", 20, { population: "contractor" }),
+      ]),
+    );
+    expect(rows.map((r) => r.name)).toEqual(["Poland", "Germany"]);
+  });
+
   it("drops countries that have already published", () => {
     // A published country is no longer something a visitor can help with, so
     // listing it would be asking for an answer that changes nothing.
     const rows = countriesNearingPublication(
-      statsWith([row("Germany", 60, 70_000), row("Spain", 30)]),
+      statsWith([row("Germany", 60, { median: 70_000 }), row("Spain", 30)]),
     );
     expect(rows.map((r) => r.name)).toEqual(["Spain"]);
   });

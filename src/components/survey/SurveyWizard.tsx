@@ -20,6 +20,7 @@ import {
 } from "@/lib/survey/options";
 import { checkSalary } from "@/lib/survey/plausibility";
 import { submittableResponseSchema } from "@/lib/survey/schema";
+import type { Answered } from "@/lib/survey/standing";
 
 import { cx } from "../ui";
 import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
@@ -95,9 +96,12 @@ export function SurveyWizard({
     step,
   );
   const [status, setStatus] = useState<"editing" | "sending" | "done" | "error">("editing");
-  // Captured before the draft is cleared: the confirmation screen needs it to
-  // show how close that country is to publishing.
+  // Captured before the draft is cleared: the confirmation screen needs the
+  // country to show how close it is to publishing, and the contract to know
+  // which of the two published cuts this answer actually joined.
   const [submittedCountry, setSubmittedCountry] = useState<string>();
+  const [submittedAnswer, setSubmittedAnswer] = useState<Answered>();
+  const [wasDuplicate, setWasDuplicate] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string>();
   const [turnstileFailed, setTurnstileFailed] = useState(false);
   const [turnstileAttempt, setTurnstileAttempt] = useState(0);
@@ -195,7 +199,20 @@ export function SurveyWizard({
         return;
       }
 
+      // 200 with a body means nothing was stored: this browser already
+      // answered today. Anything else is a 204 with no body at all.
+      const body =
+        res.status === 200
+          ? ((await res.json().catch(() => null)) as { duplicate?: boolean } | null)
+          : null;
+      setWasDuplicate(Boolean(body?.duplicate));
+
       setSubmittedCountry(parsed.data.country);
+      setSubmittedAnswer({
+        contractType: parsed.data.contractType,
+        ftePercent: parsed.data.ftePercent ?? null,
+        salaryPeriod: parsed.data.salaryPeriod ?? null,
+      });
       clearDraft();
       setStatus("done");
     } catch {
@@ -205,7 +222,13 @@ export function SurveyWizard({
   }
 
   if (status === "done") {
-    return <Confirmation country={submittedCountry} />;
+    return (
+      <Confirmation
+        country={submittedCountry}
+        answer={submittedAnswer}
+        duplicate={wasDuplicate}
+      />
+    );
   }
 
   const steps = [
@@ -272,7 +295,7 @@ export function SurveyWizard({
     },
     {
       title: "What kind of contract?",
-      hint: "This matters more than it looks: B2B and freelance gross figures are not comparable with employed ones.",
+      hint: "This decides which figures your answer joins. Employee salaries and contractor day rates are published separately, because the same gross means something different under each.",
       body: (
         <>
           <Choice

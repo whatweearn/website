@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { Share } from "@/components/Share";
-import { count, withArticle } from "@/lib/format";
+import { count, ordinal, withArticle } from "@/lib/format";
 import { gapMessage } from "@/lib/share";
+import { POPULATION_LABELS, type Population } from "@/lib/stats/populations";
 import { COUNTRIES } from "@/lib/survey/options";
+import { populationOf, standingOf, type Answered } from "@/lib/survey/standing";
 
 import { SubscribeForm } from "../SubscribeForm";
 import { Button } from "../ui";
@@ -15,25 +17,39 @@ import { Button } from "../ui";
  *
  * This is the only moment where somebody has just spent two minutes on the
  * survey and feels good about it, and the project's hardest problem is that
- * nothing publishes until a country reaches sixty responses. So the screen's
- * job is not to thank people. It is to convert that goodwill into the next
- * response, and the only lever that does that is the person on this page
- * telling someone else.
+ * nothing publishes until a cut reaches its threshold. So the screen's job is
+ * not to thank people. It is to convert that goodwill into the next response,
+ * and the only lever that does that is the person on this page telling someone
+ * else.
  *
  * The order is deliberate: acknowledgement, then the gap, then the share, and
  * everything else below it. The email form used to sit directly under the
  * thanks; it now sits under the share, because a subscriber is worth one
  * reader later and a forward is worth a response now.
+ *
+ * Everything personal on this screen is scoped to the answer's own population.
+ * An employee is placed among employees and a contractor among contractors,
+ * each against the threshold their own figures publish on, because the
+ * alternative was measuring a contractor against a count they were never in.
  */
+
+type Standing = { responses: number; remaining: number; threshold: number; published: boolean };
 
 type Progress = {
   country: string;
-  responses: number;
-  remaining: number;
-  published: boolean;
+  populations: Record<Population, Standing>;
 };
 
-export function Confirmation({ country }: { country?: string }) {
+export function Confirmation({
+  country,
+  answer,
+  duplicate = false,
+}: {
+  country?: string;
+  answer?: Answered;
+  /** Nothing was stored: this browser had already answered today. */
+  duplicate?: boolean;
+}) {
   const [progress, setProgress] = useState<Progress | null>(null);
 
   useEffect(() => {
@@ -57,48 +73,74 @@ export function Confirmation({ country }: { country?: string }) {
   // sentence, which is everywhere it appears on this screen.
   const named = withArticle(countryName);
 
-  const message = progress
-    ? gapMessage(countryName, progress.remaining, progress.published)
-    : gapMessage("Europe", 0, true);
+  const population: Population = answer ? populationOf(answer) : "employee";
+  const words = POPULATION_LABELS[population];
+  const track = progress?.populations[population] ?? null;
+  const standing = answer && track ? standingOf(answer, track.responses) : null;
+
+  const message = track
+    ? gapMessage(countryName, track.remaining, track.published, population)
+    : gapMessage("Europe", 0, true, population);
 
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-xl border border-line bg-surface p-8 text-center shadow-lg">
-        <h2 className="text-xl">That&rsquo;s in.</h2>
+        <h2 className="text-xl">{duplicate ? "Already counted." : "That’s in."}</h2>
 
-        {progress && !progress.published && (
+        {track && (
           <div className="mx-auto mt-6 max-w-sm">
-            <p className="text-sm text-ink-2">
-              You&rsquo;re the{" "}
-              <b className="figure-num font-semibold text-ink">
-                {ordinalShort(progress.responses)}
-              </b>{" "}
-              engineer from {named}.
-            </p>
-            <div
-              className="mt-3 h-1.5 overflow-hidden rounded-full bg-track"
-              role="img"
-              aria-label={`${progress.responses} of the responses ${named} needs`}
-            >
-              <div
-                className="h-full rounded-full bg-coral transition-[width] duration-700"
-                style={{
-                  width: `${Math.min(100, (progress.responses / (progress.responses + progress.remaining)) * 100)}%`,
-                }}
-              />
-            </div>
-            <p className="mt-3 text-xs text-ink-2">
-              <b className="font-semibold text-ink">{count(progress.remaining)} more</b> and{" "}
-              {named}&rsquo;s median publishes.
-            </p>
-          </div>
-        )}
+            {duplicate ? (
+              <p className="mx-auto max-w-[46ch] text-sm text-ink-2">
+                We already had an answer from this browser today, so this one was not added and
+                the earlier one stands. That check is what stops one person answering fifty
+                times, and it works on your connection and browser for the day only.
+              </p>
+            ) : (
+              standing?.kind === "position" && (
+                <p className="text-sm text-ink-2">
+                  You&rsquo;re the{" "}
+                  <b className="figure-num font-semibold text-ink">{ordinal(standing.position)}</b>{" "}
+                  {words.member} from {named}.
+                </p>
+              )
+            )}
 
-        {progress?.published && (
-          <p className="mx-auto mt-4 max-w-[42ch] text-sm text-ink-2">
-            {named}&rsquo;s figures are published, and yours makes them sharper. It joins{" "}
-            {count(progress.responses - 1)} others.
-          </p>
+            {track.published ? (
+              <p className="mx-auto mt-4 max-w-[42ch] text-sm text-ink-2">
+                {duplicate ? (
+                  <>
+                    {named}&rsquo;s {words.figures} {words.verb === "publish" ? "are" : "is"}{" "}
+                    published, from {count(track.responses)} answers.
+                  </>
+                ) : (
+                  <>
+                    {named}&rsquo;s {words.figures} {words.verb === "publish" ? "are" : "is"}{" "}
+                    published, and yours makes them sharper. It joins{" "}
+                    {count(Math.max(0, track.responses - 1))} others.
+                  </>
+                )}
+              </p>
+            ) : (
+              <>
+                <div
+                  className="mt-3 h-1.5 overflow-hidden rounded-full bg-track"
+                  role="img"
+                  aria-label={`${track.responses} of the ${track.threshold} answers ${named} needs`}
+                >
+                  <div
+                    className="h-full rounded-full bg-coral transition-[width] duration-700"
+                    style={{
+                      width: `${Math.min(100, (track.responses / track.threshold) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <p className="mt-3 text-xs text-ink-2">
+                  <b className="font-semibold text-ink">{count(track.remaining)} more</b> and{" "}
+                  {named}&rsquo;s {words.figures} {words.verb}.
+                </p>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -108,21 +150,19 @@ export function Confirmation({ country }: { country?: string }) {
         prominent
         message={message}
         headline={
-          progress && !progress.published ? (
-            <>
-              Now the part that actually decides whether {named} ever publishes.
-            </>
+          track && !track.published ? (
+            <>Now the part that actually decides whether {named} ever publishes.</>
           ) : (
             <>Now pass it on.</>
           )
         }
         blurb={
-          progress && !progress.published ? (
+          track && !track.published ? (
             <>
               You are not asking anyone for a favour. Everyone you send it to gets the same two
               minutes and the same answer you just bought yourself, and those{" "}
-              {count(progress.remaining)} responses arrive that way or not at all. One team
-              channel or one group chat is genuinely most of the way there.
+              {count(track.remaining)} responses arrive that way or not at all. One team channel
+              or one group chat is genuinely most of the way there.
             </>
           ) : (
             <>
@@ -152,10 +192,4 @@ export function Confirmation({ country }: { country?: string }) {
       </p>
     </div>
   );
-}
-
-function ordinalShort(n: number): string {
-  if (n % 100 >= 11 && n % 100 <= 13) return `${n}th`;
-  const last = n % 10;
-  return `${n}${last === 1 ? "st" : last === 2 ? "nd" : last === 3 ? "rd" : "th"}`;
 }

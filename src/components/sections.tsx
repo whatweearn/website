@@ -1,14 +1,14 @@
-import { count } from "@/lib/format";
+import { count, euro } from "@/lib/format";
 import { INVITE_MESSAGE } from "@/lib/share";
-import { type SiteStats, publishableCountries } from "@/lib/stats";
-import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, responsesUntilPublish } from "@/lib/thresholds";
+import type { CountryRow, SiteStats } from "@/lib/stats";
+import { COUNTRY_PUBLISH_MIN, MIN_CELL_SIZE, publishMinFor, untilPublish } from "@/lib/thresholds";
 
 import Link from "next/link";
 
 import { CheckIcon, CrossIcon, FileIcon, FiltersIcon, GlobeIcon } from "./icons";
 import { Reveal } from "./Reveal";
 import { Share } from "./Share";
-import { Button, Container, Pill, SectionHead, TrustLine } from "./ui";
+import { Button, Container, Pill, SectionHead, TrustLine, cx } from "./ui";
 import { ThemeToggle } from "./ThemeToggle";
 
 /* ------------------------------------------------------------------ nav -- */
@@ -361,25 +361,26 @@ export function Payoff({ published }: { published: boolean }) {
 /* --------------------------------------------------------------- table -- */
 
 export function CountryTable({ stats }: { stats: SiteStats }) {
-  const published = publishableCountries(stats);
-  const pending = stats.countries.filter((c) => !published.includes(c));
+  const rows = countryPairs(stats);
 
   return (
     <section id="data" className="py-[clamp(3rem,5.5vw,4.5rem)]">
       <Container>
         <Reveal>
           <SectionHead title="What each country pays.">
-            A country publishes once it clears {COUNTRY_PUBLISH_MIN} responses — enough for the
-            median to mean something.
+            Employee salaries publish at {publishMinFor("employee")} answers, contractor day
+            rates at {publishMinFor("contractor")}. Enough, in each case, for the median to mean
+            something. The two are never averaged together: a contractor&rsquo;s gross carries
+            social contributions an employer would otherwise pay.
           </SectionHead>
         </Reveal>
 
         <Reveal>
-          {stats.countries.length === 0 ? (
+          {rows.length === 0 ? (
             <div className="rounded-lg border border-dashed border-line-2 bg-surface p-[clamp(1.5rem,4vw,2.5rem)] text-center">
               <p className="font-display text-lg font-semibold">Nothing published yet.</p>
               <p className="mx-auto mt-2 max-w-[44ch] text-xs leading-relaxed text-ink-2">
-                No country has reached {COUNTRY_PUBLISH_MIN} responses. Until one does, this
+                No country has reached the threshold for either figure. Until one does, this
                 table stays empty — we publish medians when they mean something, not before.
               </p>
               <Button href="/survey" size="sm" arrow className="mt-6">
@@ -388,27 +389,40 @@ export function CountryTable({ stats }: { stats: SiteStats }) {
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border border-line bg-surface shadow-sm">
-              <div className="table-scroll">
+              {/* Focusable, because it now genuinely scrolls on a phone: a
+                  third figure column arrived and there is no honest column to
+                  drop, since which one is expendable depends on whether the
+                  reader is an employee or a contractor. A scrollable region
+                  that cannot be reached by keyboard is a WCAG 2.2 failure, and
+                  axe caught this the moment the column was added. */}
+              <div
+                className="table-scroll"
+                tabIndex={0}
+                role="region"
+                aria-label="Pay by country"
+              >
                 <table className="w-full border-collapse max-[560px]:min-w-0 min-[561px]:min-w-[560px]">
                   <thead>
                     <tr>
-                      <th className="border-b border-line px-5 py-[0.85rem] text-left text-2xs font-medium tracking-wider text-ink-3 uppercase whitespace-nowrap max-[560px]:px-[0.8rem]">
-                        Country
-                      </th>
-                      <th className="border-b border-line px-5 py-[0.85rem] text-right text-2xs font-medium tracking-wider text-ink-3 uppercase whitespace-nowrap max-[560px]:px-[0.8rem]">
-                        Median
-                      </th>
-                      <th className="border-b border-line px-5 py-[0.85rem] text-right text-2xs font-medium tracking-wider text-ink-3 uppercase whitespace-nowrap max-[560px]:hidden">
-                        Middle half
-                      </th>
-                      <th className="border-b border-line px-5 py-[0.85rem] text-right text-2xs font-medium tracking-wider text-ink-3 uppercase whitespace-nowrap max-[560px]:px-[0.8rem]">
-                        Responses
-                      </th>
+                      {["Country", "Employee median", "Contractor day rate", "Answers"].map(
+                        (heading, i) => (
+                          <th
+                            key={heading}
+                            scope="col"
+                            className={cx(
+                              "border-b border-line px-5 py-[0.85rem] text-2xs font-medium tracking-wider text-ink-3 uppercase whitespace-nowrap max-[560px]:px-[0.8rem]",
+                              i === 0 ? "text-left" : "text-right",
+                            )}
+                          >
+                            {heading}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
-                    {[...published, ...pending].map((row) => (
-                      <CountryRowCells key={row.name} row={row} />
+                    {rows.map((row) => (
+                      <CountryRowCells key={row.code} row={row} />
                     ))}
                   </tbody>
                 </table>
@@ -421,34 +435,106 @@ export function CountryTable({ stats }: { stats: SiteStats }) {
   );
 }
 
-function CountryRowCells({ row }: { row: ReturnType<typeof publishableCountries>[number] }) {
-  const pending = row.median === null;
-  const cell = "border-b border-line px-5 py-[0.85rem] text-xs max-[560px]:px-[0.8rem] max-[560px]:text-2xs";
+type Pair = {
+  code: string;
+  name: string;
+  currency: string;
+  employee: CountryRow | undefined;
+  contractor: CountryRow | undefined;
+};
+
+/**
+ * One row per country, carrying both figures.
+ *
+ * Two units in adjacent columns is the point rather than a compromise: it is
+ * the shortest way to say that this survey publishes what contractors charge
+ * with the same seriousness as what employees are paid, on the page most
+ * people will only read once. Part-time employees are a third population and
+ * live in the explorer, where a third unit-of-measure column would not have to
+ * fit on a phone.
+ */
+function countryPairs(stats: SiteStats): Pair[] {
+  const byCode = new Map<string, Pair>();
+
+  for (const row of stats.countries) {
+    if (row.population === "part_time") continue;
+    const pair =
+      byCode.get(row.code) ??
+      ({ code: row.code, name: row.name, currency: row.currency } as Pair);
+    if (row.population === "employee") pair.employee = row;
+    else pair.contractor = row;
+    byCode.set(row.code, pair);
+  }
+
+  const answers = (p: Pair) => (p.employee?.responses ?? 0) + (p.contractor?.responses ?? 0);
+
+  return [...byCode.values()].sort(
+    (a, b) => Number(hasAnyFigure(b)) - Number(hasAnyFigure(a)) || answers(b) - answers(a),
+  );
+}
+
+/**
+ * Whether either figure is actually published.
+ *
+ * Written out rather than with `??`, which reads well and is wrong here: a
+ * published-but-null employee median is not "missing", so `??` fell through to
+ * the contractor's, and `undefined !== null` then declared every unpublished
+ * country published. The table sorted single-response countries above ones
+ * with seven.
+ */
+function hasAnyFigure(pair: Pair): boolean {
+  return pair.employee?.median != null || pair.contractor?.median != null;
+}
+
+function CountryRowCells({ row }: { row: Pair }) {
+  const cell =
+    "border-b border-line px-5 py-[0.85rem] text-xs max-[560px]:px-[0.8rem] max-[560px]:text-2xs";
   const num = `${cell} figure-num text-right whitespace-nowrap`;
+  const answers = (row.employee?.responses ?? 0) + (row.contractor?.responses ?? 0);
+  const anyFigure = hasAnyFigure(row);
 
   return (
-    <tr className={pending ? "text-ink-3" : undefined}>
-      <td className={`${cell} font-semibold whitespace-nowrap max-[560px]:whitespace-normal ${pending ? "" : "text-ink"}`}>
+    <tr className={anyFigure ? undefined : "text-ink-3"}>
+      <td
+        className={`${cell} font-semibold whitespace-nowrap max-[560px]:whitespace-normal ${anyFigure ? "text-ink" : ""}`}
+      >
         {row.name}
         <small className="ml-2 text-2xs font-normal tracking-wide text-ink-3 max-[560px]:ml-0 max-[560px]:block">
           {row.currency}
         </small>
       </td>
-      {pending ? (
-        <>
-          <td className={num}>{responsesUntilPublish(row.responses)} more to publish</td>
-          <td className={`${num} max-[560px]:hidden`}>—</td>
-        </>
-      ) : (
-        <>
-          <td className={num}>{row.median}</td>
-          <td className={`${num} max-[560px]:hidden`}>
-            {row.p25} – {row.p75}
-          </td>
-        </>
-      )}
-      <td className={num}>{count(row.responses)}</td>
+      <FigureCell className={num} row={row.employee} suffix="" />
+      <FigureCell className={num} row={row.contractor} suffix=" a day" />
+      <td className={num}>{count(answers)}</td>
     </tr>
+  );
+}
+
+/** A published figure, or how far that figure has to go. */
+function FigureCell({
+  className,
+  row,
+  suffix,
+}: {
+  className: string;
+  row: CountryRow | undefined;
+  suffix: string;
+}) {
+  if (!row || row.responses === 0) {
+    return <td className={className}>—</td>;
+  }
+  if (row.median === null) {
+    return (
+      <td className={className}>
+        {untilPublish(row.population, row.responses)} more to publish
+      </td>
+    );
+  }
+  return (
+    <td className={className}>
+      {euro(row.median)}
+      {suffix}
+    </td>
   );
 }
 

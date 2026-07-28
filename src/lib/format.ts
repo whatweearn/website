@@ -21,9 +21,10 @@ export function count(value: number): string {
   return COUNT.format(value);
 }
 
-/** "62nd" */
+/** "62nd", and "111th" rather than "111st". */
 export function ordinal(n: number): string {
-  if (n >= 11 && n <= 13) return `${n}th`;
+  const teens = n % 100;
+  if (teens >= 11 && teens <= 13) return `${n}th`;
   const last = n % 10;
   if (last === 1) return `${n}st`;
   if (last === 2) return `${n}nd`;

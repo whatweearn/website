@@ -9,6 +9,29 @@ import { expect, test, type Page } from "@playwright/test";
  * stays disabled, a progress bar that lies about how much is left.
  */
 
+/**
+ * Gives a test its own identity before it submits.
+ *
+ * The server treats one address and browser as one person for the day, so
+ * every test in this suite was the *same* person: the first submission was
+ * stored and the rest were silently discarded as duplicates. That was
+ * invisible while a duplicate saw the same confirmation as everybody else, so
+ * most of these assertions were running against an answer the server had
+ * thrown away. It also held the suite at the five-per-hour rate limit, which
+ * is why tests were being bundled together to save submissions.
+ *
+ * Overriding the header rather than building a context with a different user
+ * agent, because the mobile project's page *is* the device emulation and a
+ * fresh context would quietly drop it. The dedup handle is computed from the
+ * request header, so this is the part that has to differ; the project name is
+ * in the tag because both projects run against one server.
+ */
+async function identify(page: Page, tag: string) {
+  await page.setExtraHTTPHeaders({
+    "user-agent": `whatweearn-e2e/${test.info().project.name}-${tag}`,
+  });
+}
+
 async function next(page: Page) {
   await page.getByRole("button", { name: /^Next/ }).click();
 }
@@ -124,6 +147,7 @@ test.describe("survey funnel", () => {
   test("walks all nine questions and submits, accepting the default currency", async ({
     page,
   }) => {
+    await identify(page, "funnel");
     await page.goto("/survey");
 
     await expect(page.getByText("Question 1 of 9")).toBeVisible();
@@ -167,6 +191,7 @@ test.describe("survey funnel", () => {
   test("returns to the submit screen in one click after fixing a flagged answer", async ({
     page,
   }) => {
+    await identify(page, "flagged");
     // Gating each step makes this unreachable through ordinary clicking (see
     // above), so the missing answer is seeded directly — the safety net this
     // exercises is for whatever gets a respondent here regardless.
@@ -286,7 +311,9 @@ test.describe("landing page", () => {
 test.describe("the data page", () => {
   test("renders honestly before any data exists", async ({ page }) => {
     await page.goto("/data");
-    await expect(page.getByRole("heading", { name: "What engineers earn." })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /What engineers earn, and what contractors charge/ }),
+    ).toBeVisible();
     await expect(page.getByText(/Nothing is published yet/)).toBeVisible();
   });
 
@@ -294,10 +321,28 @@ test.describe("the data page", () => {
     // An explorer that throws or blanks when a slice is empty is worse than
     // one that says "nobody here yet" — which is also a recruiting message.
     await page.goto("/data");
+    await page.getByRole("button", { name: /Employees, full-time/ }).click();
     await page.getByLabel("Country").selectOption("PT");
     await page.getByLabel("Level").selectOption("senior");
     await expect(page.getByText(/Nobody here yet|Not enough answers here yet/)).toBeVisible();
     await expect(page.getByRole("link", { name: /Add yours/ })).toBeVisible();
+  });
+
+  test("asks which group before showing a figure, rather than defaulting to employees", async ({
+    page,
+  }) => {
+    // Half the answers this survey receives are contractors. A page that
+    // opens on employee salaries and files everyone else below tells them
+    // which half the site is for.
+    await page.goto("/data");
+    for (const name of [/Employees, full-time/, /Employees, part-time/, /Contractors and B2B/]) {
+      await expect(page.getByRole("button", { name })).toBeVisible();
+    }
+    await expect(page.getByLabel("Country")).toHaveCount(0);
+
+    await page.getByRole("button", { name: /Contractors and B2B/ }).click();
+    await expect(page.getByLabel("Who")).toHaveValue("contractor");
+    await expect(page.getByLabel("Country")).toBeVisible();
   });
 
   test("offers no download until there are rows to release", async ({ page }) => {
@@ -460,17 +505,33 @@ test.describe("salary sanity checks", () => {
 });
 
 test.describe("the confirmation screen", () => {
-  async function submitFrom(page: Page, country: string) {
+  /** Walks the survey and submits. `contract` decides which figures it joins. */
+  async function submitFrom(
+    page: Page,
+    country: string,
+    contract: "Permanent employee" | "Contractor / freelance" = "Permanent employee",
+  ) {
     await page.goto("/survey");
     await page.getByLabel("Country").selectOption(country);
     await next(page);
     await next(page);
-    await page.getByText("Permanent employee").click();
+    await page.getByText(contract).click();
     await next(page);
     await next(page);
     await page.getByText("Senior", { exact: true }).click();
     await next(page);
-    await page.getByRole("spinbutton").first().fill("78000");
+
+    if (contract === "Contractor / freelance") {
+      await page.getByRole("spinbutton").first().fill("650");
+      await page.getByLabel("Pay period").selectOption("day");
+      // Still asked for, because an employee quoting a day rate needs it to
+      // annualise. A contractor's own figures no longer depend on it: their
+      // rate is published as a price, at a standard year.
+      await page.getByLabel(/Days you billed/).fill("210");
+    } else {
+      await page.getByRole("spinbutton").first().fill("78000");
+    }
+
     await next(page);
     await next(page);
     await next(page);
@@ -483,12 +544,39 @@ test.describe("the confirmation screen", () => {
   test("shows how close that country is to publishing", async ({ page }) => {
     // The most valuable moment in the funnel: someone has just spent two
     // minutes and feels good about it. A dead end here wastes it.
+    await identify(page, "progress");
     await submitFrom(page, "DE");
     await expect(page.getByText(/engineer from Germany/)).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/more and Germany.s median publishes/)).toBeVisible();
   });
 
+  /**
+   * Half the answers this survey receives are contractors, and this screen
+   * used to tell the first one from a country that they were its 0th engineer:
+   * it read them a count they were never in.
+   */
+  test("places a contractor among contractors, against their own threshold", async ({ page }) => {
+    await identify(page, "contractor");
+    await submitFrom(page, "FR", "Contractor / freelance");
+
+    await expect(page.getByText(/contractor from France/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/0th/)).toHaveCount(0);
+    await expect(page.getByText(/more and France.s contractor day rates publish/)).toBeVisible();
+    // And the message they are handed names the gap they can actually close.
+    await expect(page.getByText(/more contractor day rates/)).toBeVisible();
+  });
+
+  test("says plainly when an answer was not the one kept", async ({ page }) => {
+    await identify(page, "duplicate");
+    await submitFrom(page, "ES");
+    // Same browser, same day: the first answer stands and this one is dropped.
+    await submitFrom(page, "ES").catch(() => {});
+    await expect(page.getByRole("heading", { name: /Already counted/ })).toBeVisible();
+    await expect(page.getByText(/already had an answer from this browser today/)).toBeVisible();
+  });
+
   test("offers the email inline rather than sending people elsewhere", async ({ page }) => {
+    await identify(page, "email");
     await submitFrom(page, "NL");
     await expect(page.getByLabel(/Email me when results publish/)).toBeVisible();
     await expect(page.getByText(/never email you about your own numbers/)).toBeVisible();
@@ -498,6 +586,7 @@ test.describe("the confirmation screen", () => {
   // tidier to read and pushes the block past the five-per-hour rate limit,
   // which is a production rule worth more than the tidiness.
   test("makes sharing the obvious next move", async ({ page, context }) => {
+    await identify(page, "sharing");
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await submitFrom(page, "DE");
     await expect(page.getByText(/engineer from Germany/)).toBeVisible({ timeout: 15_000 });
@@ -557,6 +646,7 @@ test.describe("the confirmation screen", () => {
 
 
   test("keeps the deletion caveat, but not as the headline", async ({ page }) => {
+    await identify(page, "caveat");
     await submitFrom(page, "ES");
     const heading = await page.getByRole("heading", { name: /That.s in/ }).textContent();
     expect(heading).not.toMatch(/cannot/i);

@@ -52,11 +52,11 @@ Settled. Do not reopen without updating this file.
 5. **Engineering roles only, and architects are an engineering role — 2026-07-26.** Architect was
    added as a level (§5 screen 5). Wider IT — sysadmin, networking, DBA, IT
    support, technical BA — was considered and declined for now, on data grounds rather than
-   snobbery: **headline medians are cut by country and level, not by discipline**, so a helpdesk
+   snobbery: **medians are cut by country and level, not by discipline**, so a helpdesk
    salary would move the number this site presents as engineer pay with nothing downstream able
    to detect it. The machinery to admit those roles honestly already exists — the eligibility
-   rule that keeps B2B and part-timers out of headline figures and gives them their own cut
-   (`src/lib/stats/eligibility.ts`) — so if this is ever wanted, the work is that rule plus the
+   rule that decides which population a response belongs to
+   (`src/lib/stats/populations.ts`) — so if this is ever wanted, the work is that rule plus the
    audience copy in `layout.tsx`, `app/data/page.tsx` and `lib/share.ts`. Adding the options
    alone is the one approach that is wrong.
 
@@ -269,8 +269,10 @@ Layered, because no single measure works:
   Portuguese salary by 17%.
 - Cost-of-living view uses **Eurostat price level indices** (official, free, redistributable).
   Avoid Numbeo — licensing.
-- **Suppression:** any cell with n<5 is withheld. A country publishes at n≥60. Both thresholds
-  live in one module with tests, and the landing page quotes them — keep them in sync.
+- **Suppression:** any cell with n<5 is withheld. A country's *salaries* publish at n≥60 and
+  its *contractor day rates* at n≥25, per population — `publishMinFor()` is the one place that
+  decides. All thresholds live in one module with tests, and the landing page quotes them —
+  keep them in sync.
 - Aggregation job emits static JSON per cut, plus the anonymised CSV for download.
 - Percentiles via `percentile_cont`; property-test the stats module against a known distribution.
 
@@ -308,19 +310,73 @@ Turnstile, honeypot, rate limit. Playwright end-to-end.
 **Phase 3 — stats.** *Done.* Schema, ECB ingestion, aggregation job, suppression, nightly
 static build (`pnpm aggregate` → `src/data/stats.json`).
 
-Two inclusion rules were settled here, and they decide whether the medians mean anything:
+Two inclusion rules were settled here. **Both were replaced on 2026-07-28** — see
+*Populations, not eligibility* below, which supersedes them. They read:
 
-- **Headline figures cover employees only.** B2B and freelance gross carries the worker's own
-  social contributions, so it is far higher for the same take-home; averaging it with employed
-  gross produces a number describing nobody. Those responses stay in the dataset and get their
-  own cut — they just do not contaminate "what a country pays".
-- **Part-timers are excluded, not extrapolated.** Scaling a 60% contract to full time invents a
-  salary nobody is paid.
+- ~~**Headline figures cover employees only.**~~ B2B and freelance gross carries the worker's
+  own social contributions, so it is far higher for the same take-home; averaging it with
+  employed gross produces a number describing nobody.
+- ~~**Part-timers are excluded, not extrapolated.**~~ Scaling a 60% contract to full time
+  invents a salary nobody is paid.
+
+The statistics in both are still true and still enforced. What changed is that they stopped
+being reasons to publish *nothing* for those groups.
 
 The SQL now runs against real Postgres in tests, via PGlite (Postgres compiled to WebAssembly)
 — `src/lib/db/migrations.test.ts` applies the migrations and exercises the unique index, the
 check constraints and the `DISTINCT ON` rate lookup. Use it for any future migration: an
 untested migration's first execution should never be in production.
+
+### Populations, not eligibility — 2026-07-28
+
+The rule above was a gate: `isHeadlineEligible` decided who produced figures, and everyone else
+was dropped before anything was computed. **Half the responses this survey actually receives
+are contractors**, so half the people who answered nine questions were told, in five places,
+that their answer was not comparable and therefore not counted. The arithmetic was right and
+the message was wrong. Worse, the one cut a contractor could reach — day rates — required them
+to have quoted per day, so a contractor who gave an annual figure appeared nowhere at all.
+
+Comparability is now an **axis**. `src/lib/stats/populations.ts` assigns every response to
+exactly one population, and each publishes on its own count, against its own threshold, in its
+own unit:
+
+| Population | Unit | Publishes at |
+|---|---|---|
+| Employees, full-time | euro a year, total comp | `COUNTRY_PUBLISH_MIN` (60) |
+| Employees, part-time | euro a year, **as paid** | `COUNTRY_PUBLISH_MIN` (60) |
+| Contractors and B2B | **euro a day** | `DAY_RATE_PUBLISH_MIN` (25) |
+
+Rules that carry forward, narrower and sharper:
+
+- **Never mix populations.** There is no `*` margin across them and no key that could hold
+  one; `buildCuts` cannot express it.
+- **Never convert between units.** A contractor is measured per day, an employee per year.
+- **Never scale a part-timer.** Published exactly as paid; the scaling was the invention, not
+  the inclusion.
+
+**Contractors are measured per day, at a standard year — decided 2026-07-28.** A day rate is
+the number that describes self-employed work: one negotiated price, no bonus, equity,
+thirteenth month or part-time fraction. A quoted day rate is used as given; an annual or
+monthly figure divides by `STANDARD_BILLED_DAYS` (220) and an hourly rate multiplies by
+`STANDARD_HOURS_PER_DAY` (8). **Dividing by the days somebody personally billed is the mistake
+to avoid** — it folds holidays, parental leave and dry spells into the median and reports time
+off as a discount on the rate. Taking six weeks off does not make you cheaper. Both standards
+are published on the methodology page, and the raw amount and period are what we store, so
+anyone who prefers different standards can recompute from the dataset.
+
+Consequences to keep in mind when touching this area:
+
+- **`/data` has no default population.** It asks, with each option's answer count on it. A
+  default is what made everyone else a footnote. Do not quietly reintroduce one.
+- **"Closest to publishing" ranks by share of threshold reached**, not raw count, because the
+  thresholds differ. Twenty contractor rates are five short; twenty salaries are forty short.
+- **The landing hero card is the one place that picks a population** (full-time employees),
+  because it is a slider and needs a single unit. It says so on the card.
+- **`SiteStats.europe` and `SiteStats.dayRates` no longer exist.** The Europe-wide figure is
+  the `population|*|*` cut. `cutKey` is `population|country|level`.
+- The live counts behind the confirmation screen (`countByPopulation`) apply the same split in
+  SQL, and `migrations.test.ts` asserts the two agree. If they diverge, the site promises a
+  publication the aggregation then declines to make.
 
 **Phase 4 — results.** *Done.* Confirmation page, `/data` explorer with country and level
 filters, thin-cell messaging, CSV download.
@@ -465,7 +521,8 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
   Tailwind for layout and CSS for the parts CSS does better.
 - No arbitrary values (`w-[347px]`) outside those component styles. If it recurs, it's a token.
 - TypeScript strict. No `any` in the stats or anonymity modules.
-- Thresholds (n<5, n≥60, trim points) are named constants in one module, never inlined.
+- Thresholds (n<5, n≥60, n≥25, trim points) and conversion standards (220 billed days, 8-hour
+  day) are named constants in one module each, never inlined.
 - The two database clients are separate modules with separate credentials. **A single file must
   never import both.** Enforce with a lint rule — this is the anonymity boundary in code form.
 - No third-party scripts on any page.
@@ -493,8 +550,8 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
 - Language: **English-only in v1, decided 2026-07-26** — but the contract-type options are named
   in local legal terms once the country is known (`CONTRACT_LOCAL_TERMS` in
   `src/lib/survey/options.ts`). That is a data-quality fix, not a step towards translation. The
-  four categories are generic; the boundary that decides whether a response reaches a headline
-  median — employee versus not — is drawn by *local* law under local names. Someone on a Polish
+  four categories are generic; the boundary that decides which figures a response joins —
+  employee versus not — is drawn by *local* law under local names. Someone on a Polish
   umowa zlecenie or an Italian co.co.co. is not an employee, yet "Fixed-term employee" reads
   like a fair description of their situation, and choosing it puts a non-employee gross figure
   into the employees-only median where nothing downstream can detect it. Values are never
@@ -513,7 +570,7 @@ Tailwind v4, adopted fully. The rules that keep it from degrading:
 
   Outstanding, and **the site went live without it**: the local terms are researched, not
   authoritative, and still want a native speaker's review per country — a wrong contract form
-  here corrupts the headline figure silently. This is now the highest-value item on the list,
+  here silently moves a response into the wrong population. This is now the highest-value item on the list,
   because it is the one open question that degrades data already being collected rather than
   waiting harmlessly. It is not urgent in the sense of hours: at zero responses nothing is
   wrong yet, and the seeding push naturally puts the right native speakers in front of the
