@@ -37,7 +37,16 @@ type Progress = {
   dayRatesPublished: boolean;
 };
 
-export function Confirmation({ country, answer }: { country?: string; answer?: Answered }) {
+export function Confirmation({
+  country,
+  answer,
+  duplicate = false,
+}: {
+  country?: string;
+  answer?: Answered;
+  /** Nothing was stored: this browser had already answered today. */
+  duplicate?: boolean;
+}) {
   const [progress, setProgress] = useState<Progress | null>(null);
 
   useEffect(() => {
@@ -86,15 +95,27 @@ export function Confirmation({ country, answer }: { country?: string; answer?: A
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-xl border border-line bg-surface p-8 text-center shadow-lg">
-        <h2 className="text-xl">That&rsquo;s in.</h2>
+        <h2 className="text-xl">{duplicate ? "Already counted." : "That’s in."}</h2>
 
         {progress && track && (
           <div className="mx-auto mt-6 max-w-sm">
-            <Placement standing={standing} named={named} />
+            {duplicate ? (
+              <p className="mx-auto max-w-[46ch] text-sm text-ink-2">
+                We already had an answer from this browser today, so this one was not added and
+                the earlier one stands. That check is what stops one person answering fifty
+                times, and it works on your connection and browser for the day only.
+              </p>
+            ) : (
+              <Placement standing={standing} named={named} />
+            )}
 
             {track.published ? (
               <p className="mx-auto mt-4 max-w-[42ch] text-sm text-ink-2">
-                {onDayRates ? (
+                {duplicate ? (
+                  <>
+                    {named}&rsquo;s figures are published, from {count(track.done)} responses.
+                  </>
+                ) : onDayRates ? (
                   <>
                     {named}&rsquo;s contractor day rates are published, and yours makes them
                     sharper. It joins {count(Math.max(0, track.done - 1))} others.

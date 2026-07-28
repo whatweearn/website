@@ -101,6 +101,7 @@ export function SurveyWizard({
   // which of the two published cuts this answer actually joined.
   const [submittedCountry, setSubmittedCountry] = useState<string>();
   const [submittedAnswer, setSubmittedAnswer] = useState<Answered>();
+  const [wasDuplicate, setWasDuplicate] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string>();
   const [turnstileFailed, setTurnstileFailed] = useState(false);
   const [turnstileAttempt, setTurnstileAttempt] = useState(0);
@@ -198,6 +199,14 @@ export function SurveyWizard({
         return;
       }
 
+      // 200 with a body means nothing was stored: this browser already
+      // answered today. Anything else is a 204 with no body at all.
+      const body =
+        res.status === 200
+          ? ((await res.json().catch(() => null)) as { duplicate?: boolean } | null)
+          : null;
+      setWasDuplicate(Boolean(body?.duplicate));
+
       setSubmittedCountry(parsed.data.country);
       setSubmittedAnswer({
         contractType: parsed.data.contractType,
@@ -213,7 +222,13 @@ export function SurveyWizard({
   }
 
   if (status === "done") {
-    return <Confirmation country={submittedCountry} answer={submittedAnswer} />;
+    return (
+      <Confirmation
+        country={submittedCountry}
+        answer={submittedAnswer}
+        duplicate={wasDuplicate}
+      />
+    );
   }
 
   const steps = [
