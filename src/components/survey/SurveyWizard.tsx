@@ -24,6 +24,7 @@ import { submittableResponseSchema } from "@/lib/survey/schema";
 import { cx } from "../ui";
 import { Choice, Field, MoneyField, NumberField, Select } from "./controls";
 import {
+  FURTHEST_STEP_KEY,
   STEP_KEY,
   answersOf,
   clearDraft,
@@ -31,6 +32,7 @@ import {
   getServerDraft,
   seedDraft,
   setDraftValue,
+  setDraftValues,
   subscribeToDraft,
 } from "./draftStore";
 import { Confirmation } from "./Confirmation";
@@ -82,6 +84,16 @@ export function SurveyWizard({
       : prefilled === 2
         ? 1
         : 0;
+  // The furthest screen ever reached, so revisiting an earlier one to fix or
+  // double-check an answer can return there in one step rather than replaying
+  // every screen in between.
+  const savedFurthestStep = draft[FURTHEST_STEP_KEY];
+  const furthestStep = Math.max(
+    typeof savedFurthestStep === "number" && savedFurthestStep >= 0 && savedFurthestStep < TOTAL_STEPS
+      ? savedFurthestStep
+      : 0,
+    step,
+  );
   const [status, setStatus] = useState<"editing" | "sending" | "done" | "error">("editing");
   // Captured before the draft is cleared: the confirmation screen needs it to
   // show how close that country is to publishing.
@@ -103,8 +115,13 @@ export function SurveyWizard({
   }, [initialCountry, initialLevel]);
 
   // Restores where they were, not just what they answered. Losing your place
-  // eight questions in is its own reason to abandon a survey.
-  const goTo = useCallback((next: number) => setDraftValue(STEP_KEY, next), []);
+  // eight questions in is its own reason to abandon a survey. Also tracks the
+  // furthest screen reached so a later revisit can jump back to it directly.
+  const goTo = useCallback((next: number) => {
+    const prevFurthest = getDraft()[FURTHEST_STEP_KEY];
+    const nextFurthest = Math.max(typeof prevFurthest === "number" ? prevFurthest : 0, next);
+    setDraftValues({ [STEP_KEY]: next, [FURTHEST_STEP_KEY]: nextFurthest });
+  }, []);
   const set = useCallback((key: string, value: unknown) => setDraftValue(key, value), []);
 
   // Move focus to the new question so keyboard and screen-reader users are not
@@ -499,6 +516,17 @@ export function SurveyWizard({
   const awaitingVerification =
     last && Boolean(turnstileSiteKey) && !turnstileToken && !turnstileFailed;
 
+  // Once this screen is filled in and we're behind where we've already been —
+  // typically right after a validation error sent us back to fix one field —
+  // the next click should return us there instead of replaying every screen.
+  const canSkipAhead = !last && step < furthestStep && current.complete;
+  const nextTarget = canSkipAhead ? furthestStep : step + 1;
+  const nextLabel = canSkipAhead
+    ? furthestStep === TOTAL_STEPS - 1
+      ? "Continue to submit"
+      : "Continue"
+    : "Next";
+
   return (
     <div>
       <div className="mb-8">
@@ -555,7 +583,7 @@ export function SurveyWizard({
 
         <button
           type="button"
-          onClick={() => (last ? submit() : goTo(step + 1))}
+          onClick={() => (last ? submit() : goTo(nextTarget))}
           disabled={!current.complete || status === "sending" || awaitingVerification}
           className={cx(
             "inline-flex items-center gap-2 rounded-full px-6 py-3 font-display text-base font-semibold",
@@ -569,7 +597,7 @@ export function SurveyWizard({
               ? "Checking your browser…"
               : last
                 ? "Submit"
-                : "Next"}
+                : nextLabel}
           {!last && <span aria-hidden="true">→</span>}
         </button>
       </div>

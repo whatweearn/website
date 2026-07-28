@@ -16,6 +16,9 @@
 
 const STORAGE_KEY = "wwe-draft";
 export const STEP_KEY = "__step";
+/** Furthest screen reached, so a revisit can return there in one step instead of replaying every screen. */
+export const FURTHEST_STEP_KEY = "__furthestStep";
+const BOOKKEEPING_KEYS = new Set([STEP_KEY, FURTHEST_STEP_KEY]);
 
 export type Draft = Record<string, unknown>;
 
@@ -75,6 +78,11 @@ export function setDraftValue(key: string, value: unknown) {
   commit({ ...getDraft(), [key]: value });
 }
 
+/** Sets several keys as one write, so callers that update related bookkeeping together don't notify listeners twice. */
+export function setDraftValues(patch: Draft) {
+  commit({ ...getDraft(), ...patch });
+}
+
 /** Seeds answers the landing page already collected, without clobbering saved ones. */
 export function seedDraft(seed: Draft) {
   if (Object.keys(seed).length === 0) return;
@@ -92,7 +100,7 @@ export function clearDraft() {
   listeners.forEach((notify) => notify());
 }
 
-/** The answers alone — the step marker is bookkeeping, never a survey answer. */
+/** The answers alone — step markers are bookkeeping, never a survey answer. */
 export function answersOf(draft: Draft): Draft {
-  return Object.fromEntries(Object.entries(draft).filter(([key]) => key !== STEP_KEY));
+  return Object.fromEntries(Object.entries(draft).filter(([key]) => !BOOKKEEPING_KEYS.has(key)));
 }
