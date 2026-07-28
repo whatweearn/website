@@ -394,6 +394,93 @@ test.describe("the notification list", () => {
   });
 });
 
+test.describe("the screens a contractor is shown", () => {
+  /**
+   * Two whole screens and a field were asked of contractors and then ignored:
+   * nobody invoices themselves a bonus, equity is not what a client pays, and
+   * `populationOf` returns "contractor" before it ever reads a full-time
+   * percentage. Their published figure is a day rate, base only.
+   */
+  async function reachContract(page: Page, contract: string) {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("FR");
+    await next(page);
+    await next(page);
+    await page.getByText(contract).click();
+  }
+
+  test("asks a contractor seven questions and an employee nine", async ({ page }) => {
+    await reachContract(page, "Contractor / freelance");
+    await expect(page.getByText("Question 3 of 7")).toBeVisible();
+
+    await page.getByText("Permanent employee").click();
+    await expect(page.getByText("Question 3 of 9")).toBeVisible();
+  });
+
+  test("does not ask a contractor for a full-time percentage", async ({ page }) => {
+    await reachContract(page, "Contractor / freelance");
+    await expect(page.getByLabel("Hours")).toHaveCount(0);
+
+    await page.getByText("Permanent employee").click();
+    await expect(page.getByLabel("Hours")).toBeVisible();
+  });
+
+  test("takes a contractor from their rate to submitting, with no bonus or equity", async ({
+    page,
+  }) => {
+    await reachContract(page, "Contractor / freelance");
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+    await page.getByRole("spinbutton").first().fill("650");
+    await next(page);
+
+    // Straight to the last screen: the two skipped ones are not merely blank.
+    await expect(page.getByRole("heading", { name: "About the client" })).toBeVisible();
+    await expect(page.getByText("Question 7 of 7")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Submit" })).toBeVisible();
+  });
+
+  test("survives switching contract after passing the screens that then vanish", async ({
+    page,
+  }) => {
+    // The saved position can outlive the screen it pointed at. An employee who
+    // reaches equity, goes back and switches to contracting has a stored step
+    // that no longer exists.
+    await page.goto("/survey");
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "wwe-draft",
+        JSON.stringify({
+          country: "FR",
+          contractType: "permanent",
+          level: "senior",
+          baseSalary: 78000,
+          bonus: 5000,
+          equityAnnual: 1000,
+          ftePercent: 80,
+          __step: 7,
+          __furthestStep: 8,
+        }),
+      );
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Any equity?" })).toBeVisible();
+
+    const contractScreen = page.getByRole("heading", { name: "What kind of contract?" });
+    while (!(await contractScreen.isVisible())) {
+      await page.getByRole("button", { name: /^Back/ }).click();
+    }
+    await page.getByText("Contractor / freelance").click();
+
+    // Clamped to a screen that exists, rather than rendering nothing.
+    await expect(page.getByText("Question 3 of 7")).toBeVisible();
+    await page.getByRole("button", { name: /Continue|^Next/ }).click();
+    await expect(page.getByText(/Question \d of 7/)).toBeVisible();
+  });
+});
+
 test.describe("pay quoted per day", () => {
   test("lets a freelancer answer in the unit they think in, and nothing else", async ({
     page,
@@ -574,9 +661,13 @@ test.describe("the confirmation screen", () => {
       await page.getByRole("spinbutton").first().fill("78000");
     }
 
+    // A contractor is not asked about a bonus or equity, so there are two
+    // fewer screens between the rate and the end.
     await next(page);
-    await next(page);
-    await next(page);
+    if (contract !== "Contractor / freelance") {
+      await next(page);
+      await next(page);
+    }
     const submit = page.getByRole("button", { name: "Submit" });
     await expect(submit).toBeEnabled({ timeout: 20_000 });
     await submit.click();
