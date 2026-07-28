@@ -86,8 +86,9 @@ test.describe("contract type in local terms", () => {
     await page.getByRole("button", { name: /^Back/ }).click();
     await page.getByRole("button", { name: /^Back/ }).click();
     await page.getByLabel("Country").selectOption("DE");
-    await next(page);
-    await next(page);
+    // Both screens ahead are already answered, so returning to them is one
+    // click labelled "Continue", not two more "Next"s.
+    await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page.getByText("Über eine eigene GmbH oder UG")).toBeVisible();
     await expect(page.getByText("Kontrakt B2B (JDG)")).toHaveCount(0);
@@ -161,6 +162,43 @@ test.describe("survey funnel", () => {
     await expect(page.getByRole("button", { name: /^Next/ })).toBeDisabled();
     await page.getByRole("spinbutton").first().fill("78000");
     await expect(page.getByRole("button", { name: /^Next/ })).toBeEnabled();
+  });
+
+  test("returns to the submit screen in one click after fixing a flagged answer", async ({
+    page,
+  }) => {
+    // Gating each step makes this unreachable through ordinary clicking (see
+    // above), so the missing answer is seeded directly — the safety net this
+    // exercises is for whatever gets a respondent here regardless.
+    await page.goto("/survey");
+    await page.evaluate(() => {
+      localStorage.setItem(
+        "wwe-draft",
+        JSON.stringify({
+          country: "DE",
+          contractType: "permanent",
+          baseSalary: 78000,
+          salaryPeriod: "year",
+          currency: "EUR",
+          __step: 8,
+          __furthestStep: 8,
+        }),
+      );
+    });
+    await page.reload();
+
+    await expect(page.getByText("Question 9 of 9")).toBeVisible();
+    const submit = page.getByRole("button", { name: "Submit" });
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    await submit.click();
+
+    // Sent back to answer the missing level, not told to go find it.
+    await expect(page.getByText("Question 5 of 9")).toBeVisible();
+    await page.getByText("Senior", { exact: true }).click();
+
+    // One click, not four "Next"s, back to where submission was attempted.
+    await page.getByRole("button", { name: "Continue to submit" }).click();
+    await expect(page.getByText("Question 9 of 9")).toBeVisible();
   });
 
   test("keeps Next disabled until a required answer is given", async ({ page }) => {
