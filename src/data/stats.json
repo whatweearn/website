@@ -1,6 +1,6 @@
 {
-  "totalResponses": 9,
-  "countriesCovered": 5,
+  "totalResponses": 13,
+  "countriesCovered": 7,
   "europe": null,
   "countries": [
     {
@@ -28,6 +28,22 @@
       "p75": null
     },
     {
+      "name": "Lithuania",
+      "currency": "EUR",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "name": "Netherlands",
+      "currency": "EUR",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
       "name": "Romania",
       "currency": "RON",
       "responses": 1,
@@ -47,7 +63,7 @@
   "dayRates": [
     {
       "name": "Belgium",
-      "responses": 2,
+      "responses": 3,
       "median": null,
       "p25": null,
       "p75": null
@@ -84,7 +100,7 @@
     "*|*": {
       "country": null,
       "level": null,
-      "responses": 6,
+      "responses": 8,
       "median": null,
       "p25": null,
       "p75": null,
@@ -101,6 +117,51 @@
     },
     "FI|*": {
       "country": "FI",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "LT|mid": {
+      "country": "LT",
+      "level": "mid",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "LT|*": {
+      "country": "LT",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "*|mid": {
+      "country": null,
+      "level": "mid",
+      "responses": 3,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "NL|mid": {
+      "country": "NL",
+      "level": "mid",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "NL|*": {
+      "country": "NL",
       "level": null,
       "responses": 1,
       "median": null,
@@ -166,15 +227,6 @@
       "country": "UK",
       "level": null,
       "responses": 2,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    },
-    "*|mid": {
-      "country": null,
-      "level": "mid",
-      "responses": 1,
       "median": null,
       "p25": null,
       "p75": null,
