@@ -108,6 +108,24 @@ export const WORK_SETUPS = [
   { value: "remote_international", label: "Remote, another country", hint: "Employer is abroad" },
 ] as const;
 
+export type WorkSetup = (typeof WORK_SETUPS)[number]["value"];
+
+/**
+ * Whether where you live and where your employer is can differ.
+ *
+ * This is what decides whether asking "is your pay adjusted for where you
+ * live?" means anything. On-site and hybrid both imply commuting distance, so
+ * the answer is either tautological or a comment on the employer's banding,
+ * and both readings get recorded in one boolean — noise, on the majority of
+ * respondents. City is already asked on screen 1 and carries the geography for
+ * them. Remote is the case where the two places come apart, and it is the case
+ * within a country as much as across one: a Berlin employer either pays the
+ * Berlin band into Leipzig or adjusts it down, which is precisely the question.
+ */
+export function isRemoteSetup(workSetup: string | undefined): boolean {
+  return workSetup === "remote_domestic" || workSetup === "remote_international";
+}
+
 /**
  * Contract type is the field a US-shaped survey omits and the one that most
  * distorts European medians: Poland's B2B and Germany's Freiberufler carry far

@@ -16,6 +16,7 @@ import {
   WORK_SETUPS,
   citiesFor,
   contractTypesFor,
+  isRemoteSetup,
   type CountryCode,
 } from "@/lib/survey/options";
 import { STANDARD_BILLED_DAYS, STANDARD_HOURS_PER_DAY } from "@/lib/stats/dayRate";
@@ -112,6 +113,11 @@ function answersShown(draft: Draft, stepIds: readonly StepId[], employed: boolea
       // A contractor has no full-time equivalent: they bill days. The field is
       // hidden for them, so a stale value from before must not travel either.
       if (field === "ftePercent" && !employed) return false;
+      // Same shape one screen earlier, and this one reaches the published CSV:
+      // answer it as a remote worker, go back, pick on-site, and the boolean
+      // would otherwise be submitted from a question no longer on the screen.
+      if (field === "payLocationAdjusted" && !isRemoteSetup(draft.workSetup as string | undefined))
+        return false;
       const id = STEP_OF_FIELD[field];
       return id === undefined || shown.has(id);
     }),
@@ -360,7 +366,10 @@ export function SurveyWizard({
             onChange={(v) => set("workSetup", v)}
             options={WORK_SETUPS}
           />
-          <Choice
+          {/* Only remote workers live somewhere their employer is not, which
+              is the whole of what this asks. See `isRemoteSetup`. */}
+          {isRemoteSetup(draft.workSetup as string | undefined) && (
+            <Choice
               name="payLocationAdjusted"
               label="Is your pay adjusted for where you live?"
               value={
@@ -377,6 +386,7 @@ export function SurveyWizard({
               ]}
               compact
             />
+          )}
         </>
       ),
       complete: true,

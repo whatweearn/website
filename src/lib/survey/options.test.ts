@@ -8,8 +8,10 @@ import {
   DISCIPLINES,
   ELSEWHERE,
   LEVELS,
+  WORK_SETUPS,
   citiesFor,
   contractTypesFor,
+  isRemoteSetup,
   valuesOf,
   type ContractType,
   type CountryCode,
@@ -169,5 +171,21 @@ describe("contractTypesFor", () => {
         );
       }
     }
+  });
+});
+
+describe("work setup", () => {
+  /**
+   * The gate on the pay-adjustment question. Pinned against WORK_SETUPS rather
+   * than a literal list, so adding a setup fails here instead of silently
+   * defaulting to "not remote" and dropping the question for it.
+   */
+  it("treats exactly the remote setups as remote", () => {
+    const remote = valuesOf(WORK_SETUPS).filter(isRemoteSetup);
+    expect(remote).toEqual(["remote_domestic", "remote_international"]);
+  });
+
+  it("treats an unanswered setup as not remote", () => {
+    expect(isRemoteSetup(undefined)).toBe(false);
   });
 });

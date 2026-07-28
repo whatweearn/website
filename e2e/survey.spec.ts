@@ -481,6 +481,78 @@ test.describe("the screens a contractor is shown", () => {
   });
 });
 
+test.describe("pay adjusted for where you live", () => {
+  const QUESTION = "Is your pay adjusted for where you live?";
+
+  async function reachSetup(page: Page) {
+    await page.goto("/survey");
+    await page.getByLabel("Country").selectOption("DE");
+    await next(page);
+    await expect(page.getByRole("heading", { name: "How do you work?" })).toBeVisible();
+  }
+
+  /**
+   * On-site and hybrid both mean living within commuting distance, so the
+   * question is either tautological or a comment on the employer's banding —
+   * two incompatible readings landing in one boolean column, on the majority
+   * of respondents. City is asked on screen 1 and carries their geography.
+   */
+  test("is asked only of people whose employer is somewhere they are not", async ({ page }) => {
+    await reachSetup(page);
+    await expect(page.getByText(QUESTION)).toHaveCount(0);
+
+    for (const setup of ["On-site", "Hybrid"]) {
+      await page.getByText(setup, { exact: true }).click();
+      await expect(page.getByText(QUESTION), `${setup} was asked`).toHaveCount(0);
+    }
+
+    for (const setup of ["Remote, same country", "Remote, another country"]) {
+      await page.getByText(setup).click();
+      await expect(page.getByText(QUESTION), `${setup} was not asked`).toBeVisible();
+    }
+  });
+
+  /**
+   * The draft outlives the answer that reveals the question, and this field
+   * reaches the published CSV. Answer it as a remote worker, go back to
+   * on-site, and the boolean would otherwise be submitted from a question no
+   * longer on the screen — recorded against somebody who cannot see or correct
+   * it.
+   */
+  test("does not submit an answer given before switching to on-site", async ({ page }) => {
+    await identify(page, "location-adjusted");
+    await reachSetup(page);
+
+    await page.getByText("Remote, another country").click();
+    await page.getByRole("group", { name: QUESTION }).getByText("Yes").click();
+    await page.getByText("On-site", { exact: true }).click();
+    await expect(page.getByText(QUESTION)).toHaveCount(0);
+
+    const posted = page.waitForRequest(
+      (request) => request.url().includes("/api/response") && request.method() === "POST",
+    );
+
+    await next(page);
+    await page.getByText("Permanent employee").click();
+    await next(page);
+    await next(page);
+    await page.getByText("Senior", { exact: true }).click();
+    await next(page);
+    await page.getByRole("spinbutton").first().fill("78000");
+    await next(page);
+    await next(page);
+    await next(page);
+
+    const submit = page.getByRole("button", { name: "Submit" });
+    await expect(submit).toBeEnabled({ timeout: 20_000 });
+    await submit.click();
+
+    const { response } = JSON.parse((await posted).postData() ?? "{}");
+    expect(response.workSetup).toBe("onsite");
+    expect(response).not.toHaveProperty("payLocationAdjusted");
+  });
+});
+
 test.describe("pay quoted per day", () => {
   test("lets a freelancer answer in the unit they think in, and nothing else", async ({
     page,
