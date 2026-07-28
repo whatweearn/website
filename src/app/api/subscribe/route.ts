@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       ],
       action: { label: "Confirm this address", url: link },
       note:
-        "If this was not you, ignore it — nothing is stored until you confirm, and the address is deleted within a fortnight. " +
+        "If this was not you, ignore it. Nothing is stored until you confirm, and the address is deleted within a fortnight. " +
         "We can never email you about your own survey answers: your address is kept in a separate database with no link back to them.",
     });
 

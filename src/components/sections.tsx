@@ -90,7 +90,7 @@ export function Hero({ published }: { published: boolean }) {
         ) : (
           <>
             The company across the table knows the market rate for your job. You are
-            guessing at it. Nine questions, about two minutes. Nothing is published yet — a
+            guessing at it. Nine questions, about two minutes. Nothing is published yet. A
             country needs {COUNTRY_PUBLISH_MIN} answers before its median means anything, so
             the early ones count for most.
           </>
@@ -216,7 +216,7 @@ const ASKS = [
   { label: "Permanent, contract, or B2B" },
   { label: "What you work on, and in what" },
   { label: "Level and years of experience" },
-  { label: "Base salary — yearly, monthly, daily or hourly" },
+  { label: "Base salary (yearly, monthly, daily or hourly)" },
   { label: "Bonus actually paid last year" },
   { label: "Equity, annualised", optional: true },
   { label: "Company size and industry" },
@@ -224,7 +224,7 @@ const ASKS = [
 
 const NEVERS = [
   ["Your name", ", or anything that could rebuild it."],
-  ["Your employer.", " Headcount bracket only — never a logo."],
+  ["Your employer.", " Headcount bracket only, never a logo."],
   [
     "Anything free-text.",
     " Every answer is a bounded choice, so nothing personal can land in the data by accident.",
@@ -290,7 +290,7 @@ export function SurveyPreview() {
                     sentence wraps. */}
                 <b className="font-semibold text-ink">The one optional extra:</b>{" "}
                 after you submit, you can leave an email to hear when the results publish. It goes to a
-                separate database with no link back to your answers — which also means we can
+                separate database with no link back to your answers, which also means we can
                 never email you about your own numbers. That&rsquo;s the trade, and it&rsquo;s
                 structural, not a policy.
               </p>
@@ -307,7 +307,7 @@ export function SurveyPreview() {
 const TILES = [
   {
     title: "Find out where you sit",
-    body: "Medians and quartiles by country, level and experience, so \"am I underpaid\" stops being a feeling and becomes a percentile — cost-of-living adjusted if you want it, raw if you don't.",
+    body: "Medians and quartiles by country, level and experience, so \"am I underpaid\" stops being a feeling and becomes a percentile. Cost-of-living adjusted if you want it, raw if you don't.",
     Icon: GlobeIcon,
   },
   {
@@ -382,7 +382,7 @@ export function CountryTable({ stats }: { stats: SiteStats }) {
               <p className="font-display text-lg font-semibold">Nothing published yet.</p>
               <p className="mx-auto mt-2 max-w-[44ch] text-xs leading-relaxed text-ink-2">
                 No country has reached the threshold for either figure. Until one does, this
-                table stays empty — we publish medians when they mean something, not before.
+                table stays empty. We publish medians when they mean something, not before.
               </p>
               <Button href="/survey" size="sm" arrow className="mt-6">
                 Add the first
@@ -522,7 +522,7 @@ function FigureCell({
   suffix: string;
 }) {
   if (!row || row.responses === 0) {
-    return <td className={className}>—</td>;
+    return <td className={className}>–</td>;
   }
   if (row.median === null) {
     return (
@@ -589,7 +589,7 @@ export function SiteFooter() {
   return (
     <Container>
       <footer className="mt-[clamp(3rem,6vw,4.5rem)] flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-line py-8 text-xs text-ink-3">
-        <span>whatweearn — open salary data for European engineers. CC BY 4.0.</span>
+        <span>whatweearn: open salary data for European engineers. CC BY 4.0.</span>
         {/* The theme control sits with the site's other housekeeping rather
             than in the nav, where it was competing for attention with the only
             action on the page. Grouped with the links so the footer stays two

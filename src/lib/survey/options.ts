@@ -221,7 +221,7 @@ export const CONTRACT_LOCAL_TERMS: Partial<
   GR: {
     permanent: "Σύμβαση αορίστου χρόνου",
     fixed_term: "Σύμβαση ορισμένου χρόνου",
-    contractor: "Μπλοκάκι — ελεύθερος επαγγελματίας",
+    contractor: "Μπλοκάκι (ελεύθερος επαγγελματίας)",
     b2b: "Μέσω δικής σου εταιρείας",
   },
   IE: {
@@ -257,7 +257,7 @@ export const CONTRACT_LOCAL_TERMS: Partial<
   PT: {
     permanent: "Contrato sem termo",
     fixed_term: "Contrato a termo",
-    contractor: "Recibos verdes — trabalhador independente",
+    contractor: "Recibos verdes (trabalhador independente)",
     b2b: "Através da tua empresa (Lda.)",
   },
   RO: {

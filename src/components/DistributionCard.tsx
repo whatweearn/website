@@ -96,7 +96,7 @@ function AwaitingData({ lifted }: { lifted?: boolean }) {
       </div>
 
       <p className="mt-5 max-w-[48ch] text-xs leading-relaxed text-ink-2">
-        {`This is where your salary gets placed against everyone else's. It stays empty until a country clears ${COUNTRY_PUBLISH_MIN} responses — a median over six people isn't a median worth printing, and we'd rather show nothing than something invented.`}
+        {`This is where your salary gets placed against everyone else's. It stays empty until a country clears ${COUNTRY_PUBLISH_MIN} responses, since a median over six people isn't a median worth printing, and we'd rather show nothing than something invented.`}
       </p>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-[1.1rem]">
@@ -204,8 +204,8 @@ function Interactive({
       <div className="mt-6">
         <label htmlFor="comp" className="mb-[0.35rem] block text-xs text-ink-2">
           {perDay
-            ? "Drag to your day rate — gross, as you quote it"
-            : "Drag to your total comp — gross annual, base plus bonus and equity"}
+            ? "Drag to your day rate: gross, as you quote it"
+            : "Drag to your total comp: gross annual, base plus bonus and equity"}
         </label>
         <input
           id="comp"
