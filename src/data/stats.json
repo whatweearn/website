@@ -1,5 +1,5 @@
 {
-  "totalResponses": 20,
+  "totalResponses": 21,
   "countriesCovered": 9,
   "countries": [
     {
@@ -87,7 +87,7 @@
       "code": "UK",
       "name": "United Kingdom",
       "currency": "GBP",
-      "responses": 2,
+      "responses": 3,
       "median": null,
       "p25": null,
       "p75": null
@@ -138,7 +138,7 @@
       "population": "contractor",
       "country": null,
       "level": "architect",
-      "responses": 1,
+      "responses": 2,
       "median": null,
       "p25": null,
       "p75": null,
@@ -148,7 +148,7 @@
       "population": "contractor",
       "country": null,
       "level": null,
-      "responses": 11,
+      "responses": 12,
       "median": null,
       "p25": null,
       "p75": null,
@@ -434,6 +434,26 @@
       "p75": null,
       "distribution": null
     },
+    "contractor|UK|architect": {
+      "population": "contractor",
+      "country": "UK",
+      "level": "architect",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "contractor|UK|*": {
+      "population": "contractor",
+      "country": "UK",
+      "level": null,
+      "responses": 3,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
     "employee|UK|mid": {
       "population": "employee",
       "country": "UK",
@@ -459,16 +479,6 @@
       "country": "UK",
       "level": "mid",
       "responses": 1,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    },
-    "contractor|UK|*": {
-      "population": "contractor",
-      "country": "UK",
-      "level": null,
-      "responses": 2,
       "median": null,
       "p25": null,
       "p75": null,
