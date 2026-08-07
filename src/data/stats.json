@@ -1,6 +1,6 @@
 {
-  "totalResponses": 21,
-  "countriesCovered": 9,
+  "totalResponses": 23,
+  "countriesCovered": 11,
   "countries": [
     {
       "population": "employee",
@@ -18,6 +18,26 @@
       "name": "United Kingdom",
       "currency": "GBP",
       "responses": 2,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "population": "employee",
+      "code": "CZ",
+      "name": "Czechia",
+      "currency": "CZK",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null
+    },
+    {
+      "population": "employee",
+      "code": "DE",
+      "name": "Germany",
+      "currency": "EUR",
+      "responses": 1,
       "median": null,
       "p25": null,
       "p75": null
@@ -238,7 +258,7 @@
       "population": "employee",
       "country": null,
       "level": "senior",
-      "responses": 5,
+      "responses": 6,
       "median": null,
       "p25": null,
       "p75": null,
@@ -248,7 +268,7 @@
       "population": "employee",
       "country": null,
       "level": null,
-      "responses": 9,
+      "responses": 11,
       "median": null,
       "p25": null,
       "p75": null,
@@ -269,6 +289,56 @@
       "country": null,
       "level": "staff",
       "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "employee|CZ|senior": {
+      "population": "employee",
+      "country": "CZ",
+      "level": "senior",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "employee|CZ|*": {
+      "population": "employee",
+      "country": "CZ",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "employee|DE|mid": {
+      "population": "employee",
+      "country": "DE",
+      "level": "mid",
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "employee|DE|*": {
+      "population": "employee",
+      "country": "DE",
+      "level": null,
+      "responses": 1,
+      "median": null,
+      "p25": null,
+      "p75": null,
+      "distribution": null
+    },
+    "employee|*|mid": {
+      "population": "employee",
+      "country": null,
+      "level": "mid",
+      "responses": 4,
       "median": null,
       "p25": null,
       "p75": null,
@@ -349,16 +419,6 @@
       "country": "LT",
       "level": null,
       "responses": 1,
-      "median": null,
-      "p25": null,
-      "p75": null,
-      "distribution": null
-    },
-    "employee|*|mid": {
-      "population": "employee",
-      "country": null,
-      "level": "mid",
-      "responses": 3,
       "median": null,
       "p25": null,
       "p75": null,
